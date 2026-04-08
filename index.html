@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Estacion Central</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: rgba(0,0,0,0.08);
+    --text: #1a1a18;
+    --text2: #6b6b66;
+    --text3: #9e9e99;
+    --accent: #1a1a18;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 90px;
+  }
+
+  .header {
+    background: var(--bg);
+    padding: 52px 20px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 10px;
+  }
+
+  .title-group { flex: 1; min-width: 0; }
+
+  .title-station {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text3);
+    margin-bottom: 2px;
+  }
+
+  .title-area {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+    transition: opacity 0.15s;
+  }
+
+  /* Status summary pill row */
+  .status-summary {
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+    align-items: center;
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text2);
+  }
+
+  .status-pill-icon { font-size: 13px; line-height: 1; }
+  .status-pill-count { font-weight: 500; min-width: 10px; }
+
+  .status-summary-sep {
+    width: 1px; height: 12px;
+    background: var(--border);
+  }
+
+  .status-total {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text3);
+  }
+
+  .icon-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .icon-btn:active { transform: scale(0.92); background: var(--surface2); }
+  .spinning { animation: spin 0.5s linear; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toolbar-row {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    align-items: center;
+  }
+  .toolbar-row + .toolbar-row { margin-top: 6px; }
+  .toolbar-row::-webkit-scrollbar { display: none; }
+
+  .toolbar-label {
+    flex-shrink: 0;
+    font-size: 10px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--text3);
+    padding-right: 2px;
+  }
+
+  .chip {
+    flex-shrink: 0;
+    font-size: 12px; font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.12s;
+    font-family: 'DM Sans', sans-serif;
+    white-space: nowrap;
+  }
+  .chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .chip:active { transform: scale(0.95); }
+  .divider { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; margin: 0 2px; }
+
+  .search-wrap {
+    padding: 10px 16px 0;
+    position: sticky;
+    top: var(--header-h, 170px);
+    z-index: 9;
+    background: var(--bg);
+    padding-bottom: 8px;
+  }
+  .search-inner {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 12px;
+    height: 40px;
+  }
+  .search-inner:focus-within { border-color: #2563eb; }
+  .search-inner input {
+    flex: 1; border: none; background: transparent;
+    font-family: 'DM Sans', sans-serif; font-size: 14px;
+    color: var(--text); outline: none;
+    padding: 0;
+  }
+  .search-inner input::placeholder { color: var(--text3); }
+  #search-clear {
+    background: none; border: none; cursor: pointer;
+    color: var(--text3); font-size: 13px; padding: 0;
+    line-height: 1; flex-shrink: 0;
+  }
+  #search-clear:hover { color: var(--text2); }
+
+  .row-highlight { background: #fef9c3; }
+
+  /* Area separator */
+  .area-sep {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0 8px;
+  }
+  .area-sep:first-child { margin-top: 2px; }
+  .area-sep-label {
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.7px;
+    color: var(--text3);
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .area-sep-line { flex: 1; height: 1px; background: var(--border); }
+  .area-sep-count { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); flex-shrink: 0; }
+
+  .row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 7px;
+    padding: 10px 12px;
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer;
+    transition: transform 0.1s;
+    min-height: 48px;
+  }
+  .row:active { transform: scale(0.99); background: var(--surface2); }
+
+  .row-id { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); flex-shrink: 0; min-width: 18px; text-align: right; }
+  .row-status { font-size: 16px; flex-shrink: 0; line-height: 1; }
+  .row-name { flex: 1; font-size: 14px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .circ-wrap { flex-shrink: 0; width: 32px; height: 32px; }
+
+  .state-box { text-align: center; padding: 4rem 1rem; color: var(--text3); font-size: 14px; }
+  .state-icon { font-size: 32px; margin-bottom: 12px; }
+
+  .error-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); padding: 12px 16px; font-size: 13px; color: #dc2626; margin-bottom: 16px; }
+
+  .fab { position: fixed; bottom: 24px; right: 20px; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,0.18); transition: transform 0.15s; z-index: 20; }
+  .fab:active { transform: scale(0.92); }
+  .fab-ai { position: fixed; bottom: 24px; left: 20px; width: auto; min-width: 52px; padding: 0 16px; height: 52px; border-radius: 26px; background: var(--surface); color: var(--text); border: 1px solid var(--border); font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.10); transition: transform 0.15s; z-index: 20; white-space: nowrap; }
+  .fab-ai:active { transform: scale(0.96); background: var(--surface2); }
+  .fab-ai-icon { font-size: 16px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; align-items: flex-end; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+
+  .modal { background: var(--surface); border-radius: var(--radius) var(--radius) 0 0; padding: 16px 20px 40px; width: 100%; max-width: 480px; animation: slideUp 0.2s ease; max-height: 92vh; overflow-y: auto; }
+  @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 4px; margin: 0 auto 16px; }
+  .modal-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .modal-top .modal-handle { margin: 0; }
+  .btn-close { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; line-height: 1; }
+  .btn-close:active { background: var(--border); transform: scale(0.92); }
+
+  .detail-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+  .detail-status-icon { font-size: 28px; margin-top: 2px; flex-shrink: 0; }
+  .detail-title { font-size: 20px; font-weight: 600; color: var(--text); line-height: 1.35; flex: 1; word-break: break-word; white-space: normal; }
+
+  .detail-circ-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 20px; }
+  .detail-circ-label { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
+
+  .detail-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .detail-field { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 12px; }
+  .detail-field-full { grid-column: 1 / -1; }
+  .detail-field-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text3); font-weight: 500; margin-bottom: 4px; }
+  .detail-field-value { font-size: 14px; font-weight: 500; color: var(--text); }
+
+  .detail-block { border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 10px; }
+  .detail-block-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500; margin-bottom: 6px; }
+  .detail-block-value { font-size: 14px; line-height: 1.55; color: var(--text); }
+  .detail-block-empty { font-size: 13px; font-style: italic; }
+
+  .block-alert { background: #fffbeb; border: 1px solid #fde68a; }
+  .block-alert .detail-block-label { color: #92400e; }
+  .block-alert .detail-block-empty { color: #d97706; }
+
+  .block-action { background: #eff6ff; border: 1px solid #bfdbfe; }
+  .block-action .detail-block-label { color: #1e3a8a; }
+  .block-action .detail-block-empty { color: #3b82f6; }
+
+  .block-responsible { background: var(--surface2); border: 1px solid var(--border); }
+  .block-responsible .detail-block-label { color: var(--text3); }
+  .block-responsible .detail-block-empty { color: var(--text3); font-style: italic; }
+
+  .block-gantt { border: 1px solid var(--border); }
+  .block-gantt .detail-block-label { color: var(--text3); }
+  .block-gantt-pending { background: #fffbeb; border-color: #fde68a !important; }
+  .block-gantt-pending .detail-block-label { color: #92400e !important; }
+  .block-gantt-ok { background: var(--surface2); }
+
+  .gantt-toggle {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 12px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--surface2); cursor: pointer;
+    transition: all 0.15s; user-select: none;
+  }
+  .gantt-toggle.on { background: #fffbeb; border-color: #fde68a; }
+  .gantt-toggle-box {
+    width: 20px; height: 20px; border-radius: 5px; flex-shrink: 0;
+    border: 1.5px solid var(--border); background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; transition: all 0.15s;
+  }
+  .gantt-toggle.on .gantt-toggle-box { background: #d97706; border-color: #d97706; color: #fff; }
+  .gantt-toggle-box::after { content: ''; }
+  .gantt-toggle.on .gantt-toggle-box::after { content: '✓'; color: #fff; font-weight: 600; font-size: 12px; }
+  #gantt-toggle-label { font-size: 14px; color: var(--text2); }
+  .gantt-toggle.on #gantt-toggle-label { color: #92400e; font-weight: 500; }
+
+  .resp-picker { display: flex; flex-wrap: wrap; gap: 7px; }
+  .resp-opt {
+    font-size: 12px; font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.12s;
+    user-select: none;
+  }
+  .resp-opt.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .resp-opt:active { transform: scale(0.95); }
+
+  .detail-actions { display: flex; gap: 8px; margin-top: 16px; }
+
+  .modal h2 { font-size: 17px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+  .form-row { margin-bottom: 12px; }
+  .form-row label { display: block; font-size: 10px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 5px; }
+  .form-row input, .form-row select, .form-row textarea { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; padding: 10px 12px; outline: none; transition: border-color 0.15s; }
+  .form-row input, .form-row select { height: 42px; padding: 0 12px; }
+  .form-row textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: #2563eb; background: #fff; }
+
+  .status-picker { display: flex; gap: 8px; }
+  .status-opt { flex: 1; height: 42px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.12s; }
+  .status-opt.selected { border: 2px solid var(--accent); background: var(--surface); }
+  .status-opt:active { transform: scale(0.94); }
+
+  .slider-row { display: flex; align-items: center; gap: 10px; }
+  .slider-row input[type=range] { flex: 1; height: 4px; -webkit-appearance: none; background: var(--surface2); border-radius: 4px; border: none; padding: 0; }
+  .slider-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+  .slider-val { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--text2); min-width: 34px; text-align: right; }
+
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .btn-cancel { flex: 1; height: 44px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; cursor: pointer; }
+  .btn-save { flex: 2; height: 44px; border: none; background: var(--accent); color: #fff; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; transition: opacity 0.15s; }
+  .btn-danger { flex: 1; height: 44px; border: none; background: #fef2f2; color: #dc2626; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; cursor: pointer; }
+  .btn-edit { flex: 2; height: 44px; border: none; background: var(--accent); color: #fff; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; }
+  .btn-summary { flex: 1; height: 44px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .btn-summary:active { opacity: 0.7; }
+
+  .summary-text { font-size: 14px; line-height: 1.75; color: var(--text); white-space: pre-wrap; }
+  .summary-section { margin-bottom: 14px; }
+  .summary-section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text3); margin-bottom: 6px; }
+  .summary-scope-chip { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; background: var(--surface2); color: var(--text2); border: 1px solid var(--border); margin-bottom: 14px; }
+  .btn-save:disabled { opacity: 0.5; }
+  .btn-cancel:active, .btn-danger:active { opacity: 0.7; }
+  .btn-save:active, .btn-edit:active { opacity: 0.8; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-row">
+    <div class="title-group">
+      <div class="title-station">Estación Central</div>
+      <div class="title-area" id="title-area">Todas las Actividades</div>
+      <div class="status-summary" id="status-summary"></div>
+    </div>
+    <button class="icon-btn" id="refresh-btn" onclick="loadRecords()" title="Refresh">↻</button>
+  </div>
+
+  <div class="toolbar-row">
+    <span class="toolbar-label">Status</span>
+    <div class="chip active" data-filter-status="All" onclick="setStatusFilter(this)">All</div>
+    <div class="chip" data-filter-status="🟢" onclick="setStatusFilter(this)">🟢</div>
+    <div class="chip" data-filter-status="🟡" onclick="setStatusFilter(this)">🟡</div>
+    <div class="chip" data-filter-status="🔴" onclick="setStatusFilter(this)">🔴</div>
+    <div class="divider"></div>
+    <span class="toolbar-label">Sort</span>
+    <div class="chip active" data-sort="id" onclick="setSort(this)">Line #</div>
+    <div class="chip" data-sort="status" onclick="setSort(this)">Status</div>
+    <div class="chip" data-sort="progress" onclick="setSort(this)">Progress</div>
+  </div>
+
+  <div class="toolbar-row" id="area-toolbar">
+    <span class="toolbar-label">Area</span>
+    <div class="chip active" data-filter-area="All" onclick="setAreaFilter(this)">All</div>
+  </div>
+</div>
+
+<div class="search-wrap">
+  <div class="search-inner">
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style="flex-shrink:0;opacity:0.4">
+      <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/>
+      <line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <input type="text" id="search-input" placeholder="Buscar actividades..." oninput="onSearch()" autocomplete="off" autocorrect="off" spellcheck="false">
+    <button id="search-clear" onclick="clearSearch()" style="display:none;">✕</button>
+  </div>
+</div>
+
+<div class="content" id="list">
+  <div class="state-box"><div class="state-icon">⏳</div>Cargando...</div>
+</div>
+
+<button class="fab" onclick="openNew()">+</button>
+<button class="fab-ai" onclick="openSummary()"><span class="fab-ai-icon">✦</span> Resumen IA</button>
+
+<!-- Detail modal -->
+<div class="modal-overlay" id="detail-overlay" onclick="closeDetail()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-top">
+      <div class="modal-handle"></div>
+      <button class="btn-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="detail-header">
+      <div class="detail-status-icon" id="d-icon"></div>
+      <div class="detail-title" id="d-title"></div>
+    </div>
+    <div class="detail-circ-wrap">
+      <div id="d-circ"></div>
+      <div class="detail-circ-label">progreso</div>
+    </div>
+    <div class="detail-fields" id="d-fields"></div>
+    <div class="detail-block block-alert">
+      <div class="detail-block-label">Alerta</div>
+      <div class="detail-block-value" id="d-alert"></div>
+    </div>
+    <div class="detail-block block-action">
+      <div class="detail-block-label">Acción</div>
+      <div class="detail-block-value" id="d-action"></div>
+    </div>
+    <div class="detail-block block-responsible">
+      <div class="detail-block-label">Responsable</div>
+      <div class="detail-block-value" id="d-responsible"></div>
+    </div>
+    <div class="detail-block block-gantt" id="d-gantt-block">
+      <div class="detail-block-label">Gantt</div>
+      <div class="detail-block-value" id="d-gantt"></div>
+    </div>
+    <div class="detail-actions">
+      <button class="btn-edit" onclick="switchToEdit()">Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Summary modal -->
+<div class="modal-overlay" id="summary-overlay" onclick="closeSummary()">
+  <div class="modal" onclick="event.stopPropagation()" style="max-height:85vh;">
+    <div class="modal-top">
+      <div class="modal-handle"></div>
+      <button class="btn-close" onclick="closeSummary()">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <span style="font-size:18px;">✦</span>
+      <h2 style="margin:0;" id="summary-scope-label">Resumen del proyecto</h2>
+    </div>
+    <div id="summary-body">
+      <div class="state-box" style="padding:2rem 1rem;">
+        <div class="state-icon" id="summary-spinner" style="animation:spin 1s linear infinite;display:inline-block;">⟳</div>
+        <div style="margin-top:8px;font-size:13px;">Generando resumen...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Form modal -->
+<div class="modal-overlay" id="form-overlay" onclick="handleOverlay(event,'form-overlay')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 id="form-title">Nueva actividad</h2>
+    <div class="form-row"><label>Task</label><input type="text" id="f-task" placeholder="¿Qué hay que hacer?"></div>
+    <div class="form-row"><label>Project</label><input type="text" id="f-project" placeholder="Nombre del proyecto"></div>
+    <div class="form-row"><label>Area</label><input type="text" id="f-area" placeholder="Área o equipo"></div>
+    <div class="form-row">
+      <label>Status</label>
+      <div class="status-picker">
+        <div class="status-opt selected" data-val="🟢" onclick="pickStatus(this)">🟢</div>
+        <div class="status-opt" data-val="🟡" onclick="pickStatus(this)">🟡</div>
+        <div class="status-opt" data-val="🔴" onclick="pickStatus(this)">🔴</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Progress</label>
+      <div class="slider-row">
+        <input type="range" min="0" max="100" step="1" value="0" id="f-progress"
+          oninput="document.getElementById('prog-val').textContent=this.value+'%'">
+        <span class="slider-val" id="prog-val">0%</span>
+      </div>
+    </div>
+    <div class="form-row"><label>Alert</label><textarea id="f-alert" placeholder="¿Algún bloqueo o alerta?"></textarea></div>
+    <div class="form-row"><label>Action</label><textarea id="f-action" placeholder="¿Qué acción lo resuelve?"></textarea></div>
+    <div class="form-row">
+      <label>Gantt</label>
+      <div class="gantt-toggle" onclick="toggleGantt()" id="gantt-toggle">
+        <div class="gantt-toggle-box" id="gantt-toggle-box"></div>
+        <span id="gantt-toggle-label">Pendiente de carga al Gantt</span>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Responsible</label>
+      <div class="resp-picker" id="resp-picker">
+        <div class="resp-opt" data-val="Juan José (Metamorfosis)" onclick="toggleResp(this)">Juan José (Metamorfosis)</div>
+        <div class="resp-opt" data-val="Justo (Metamorfosis)" onclick="toggleResp(this)">Justo (Metamorfosis)</div>
+        <div class="resp-opt" data-val="Laura (PLAN-O)" onclick="toggleResp(this)">Laura (PLAN-O)</div>
+        <div class="resp-opt" data-val="Jose Camilo (PLAN-O)" onclick="toggleResp(this)">Jose Camilo (PLAN-O)</div>
+        <div class="resp-opt" data-val="Robin Maestro (PLAN-O)" onclick="toggleResp(this)">Robin Maestro (PLAN-O)</div>
+        <div class="resp-opt" data-val="Nett Hernández" onclick="toggleResp(this)">Nett Hernández</div>
+        <div class="resp-opt" data-val="Julian (Central Cervecera)" onclick="toggleResp(this)">Julian (Central Cervecera)</div>
+        <div class="resp-opt" data-val="Otro" onclick="toggleResp(this)">Otro</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeForm()">Cancelar</button>
+      <button class="btn-save" id="save-btn" onclick="saveRecord()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const TOKEN   = 'pat8SF9w9X7yJCGyp.1ebcc53985c2bd9f8181d748623c3a4768f638da2d826840c6ed813e7e4bce4f';
+  const BASE    = 'appMQxYmohtXSCvUn';
+  const TABLE   = 'Table 1';
+  const API_URL = `https://api.airtable.com/v0/${BASE}/${encodeURIComponent(TABLE)}`;
+  const HEADERS = { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
+  const STATUS_ORDER = { '🟢': 0, '🟡': 1, '🔴': 2 };
+
+  let allRecords   = [];
+  let activeStatus = 'All';
+  let activeArea   = 'All';
+  let activeSort   = 'id';
+  let searchQuery  = '';
+  let viewingId    = null;
+  let editingId    = null;
+
+  function toPct(raw) {
+    if (raw === null || raw === undefined || raw === '') return 0;
+    const n = Number(raw);
+    if (isNaN(n)) return 0;
+    return Math.round(n <= 1 ? n * 100 : n);
+  }
+
+  function circColor(pct) {
+    /* Smooth gradient: 0% = red, 50% = amber, 100% = green */
+    const r0 = [220, 38,  38],  /* #dc2626 red   */
+          r1 = [217,119,  6],   /* #d97706 amber  */
+          r2 = [ 22,163, 74];   /* #16a34a green  */
+    let r, g, b;
+    if (pct <= 50) {
+      const t = pct / 50;
+      r = Math.round(r0[0] + (r1[0]-r0[0]) * t);
+      g = Math.round(r0[1] + (r1[1]-r0[1]) * t);
+      b = Math.round(r0[2] + (r1[2]-r0[2]) * t);
+    } else {
+      const t = (pct - 50) / 50;
+      r = Math.round(r1[0] + (r2[0]-r1[0]) * t);
+      g = Math.round(r1[1] + (r2[1]-r1[1]) * t);
+      b = Math.round(r1[2] + (r2[2]-r1[2]) * t);
+    }
+    return `rgb(${r},${g},${b})`;
+  }
+
+  function makeCircSVG(pct, status, size) {
+    const r   = size * 0.42, cx = size / 2;
+    const c   = 2 * Math.PI * r;
+    const off = c - (pct / 100) * c;
+    const col = circColor(pct);
+    const sw  = size <= 32 ? 3 : 5;
+    const fs  = size <= 32 ? 7 : 13;
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)">
+      <circle fill="none" stroke="#f0efe9" stroke-width="${sw}" cx="${cx}" cy="${cx}" r="${r}"/>
+      <circle fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round"
+        cx="${cx}" cy="${cx}" r="${r}"
+        stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}"/>
+      <text font-size="${fs}" font-family="DM Mono,monospace" fill="#9e9e99"
+        text-anchor="middle" dominant-baseline="middle"
+        x="${cx}" y="${cx}" transform="rotate(90,${cx},${cx})">${pct}%</text>
+    </svg>`;
+  }
+
+  function getFiltered() {
+    let recs = [...allRecords];
+    if (activeStatus !== 'All')
+      recs = recs.filter(r => (r.fields.Status || '🟢') === activeStatus);
+    if (activeArea !== 'All')
+      recs = recs.filter(r => (r.fields.Area || '') === activeArea);
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      recs = recs.filter(r => {
+        const f = r.fields;
+        return (f.Task        || '').toLowerCase().includes(q)
+            || (f.Project     || '').toLowerCase().includes(q)
+            || (f.Area        || '').toLowerCase().includes(q)
+            || (f.Alert       || '').toLowerCase().includes(q)
+            || (f.Action      || '').toLowerCase().includes(q);
+      });
+    }
+    /* Build area order based on the minimum ID in each area */
+    const areaMinId = {};
+    recs.forEach(r => {
+      const area = (r.fields.Area || '').trim();
+      const id   = Number(r.fields['ID']) || 0;
+      if (areaMinId[area] === undefined || id < areaMinId[area]) areaMinId[area] = id;
+    });
+
+    if (activeSort === 'id')
+      recs.sort((a,b) => {
+        const areaA = (a.fields.Area || '').trim();
+        const areaB = (b.fields.Area || '').trim();
+        if (areaA !== areaB) return areaMinId[areaA] - areaMinId[areaB];
+        return (Number(a.fields['ID'])||0) - (Number(b.fields['ID'])||0);
+      });
+    else if (activeSort === 'status')
+      recs.sort((a,b) => {
+        const areaA = (a.fields.Area || '').trim();
+        const areaB = (b.fields.Area || '').trim();
+        if (areaA !== areaB) return areaMinId[areaA] - areaMinId[areaB];
+        return (STATUS_ORDER[a.fields.Status||'🟢']||0) - (STATUS_ORDER[b.fields.Status||'🟢']||0);
+      });
+    else if (activeSort === 'progress')
+      recs.sort((a,b) => {
+        const areaA = (a.fields.Area || '').trim();
+        const areaB = (b.fields.Area || '').trim();
+        if (areaA !== areaB) return areaMinId[areaA] - areaMinId[areaB];
+        return toPct(b.fields.Progress) - toPct(a.fields.Progress);
+      });
+    return recs;
+  }
+
+  /* Update dynamic title + status summary counts */
+  function updateHeader(filtered) {
+    /* Title */
+    const titleEl = document.getElementById('title-area');
+    titleEl.textContent = activeArea === 'All' ? 'Todas las Actividades' : activeArea;
+
+    /* Count by status within the current area filter (ignoring status chip) */
+    const base = activeArea === 'All'
+      ? allRecords
+      : allRecords.filter(r => (r.fields.Area || '') === activeArea);
+
+    const green  = base.filter(r => (r.fields.Status || '🟢') === '🟢').length;
+    const yellow = base.filter(r => (r.fields.Status || '🟢') === '🟡').length;
+    const red    = base.filter(r => (r.fields.Status || '🟢') === '🔴').length;
+    const total  = base.length;
+
+    document.getElementById('status-summary').innerHTML = `
+      <div class="status-pill">
+        <span class="status-pill-icon">🔴</span>
+        <span class="status-pill-count">${red}</span>
+      </div>
+      <div class="status-summary-sep"></div>
+      <div class="status-pill">
+        <span class="status-pill-icon">🟡</span>
+        <span class="status-pill-count">${yellow}</span>
+      </div>
+      <div class="status-summary-sep"></div>
+      <div class="status-pill">
+        <span class="status-pill-icon">🟢</span>
+        <span class="status-pill-count">${green}</span>
+      </div>
+      <div class="status-summary-sep"></div>
+      <div class="status-total">${total} total</div>
+    `;
+  }
+
+  function buildAreaChips() {
+    const areas = [...new Set(
+      allRecords.map(r => r.fields.Area).filter(a => a && a.trim())
+    )].sort();
+    const toolbar = document.getElementById('area-toolbar');
+    toolbar.innerHTML = `<span class="toolbar-label">Area</span>
+      <div class="chip active" data-filter-area="All" onclick="setAreaFilter(this)">All</div>
+      ${areas.map(a => `<div class="chip" data-filter-area="${esc(a)}" onclick="setAreaFilter(this)">${esc(a)}</div>`).join('')}`;
+    if (activeArea !== 'All') {
+      const el = toolbar.querySelector(`[data-filter-area="${esc(activeArea)}"]`);
+      if (el) { toolbar.querySelector('[data-filter-area="All"]').classList.remove('active'); el.classList.add('active'); }
+      else activeArea = 'All';
+    }
+  }
+
+  function renderList() {
+    const filtered = getFiltered();
+    updateHeader(filtered);
+
+    const list = document.getElementById('list');
+    if (!filtered.length) {
+      list.innerHTML = '<div class="state-box"><div class="state-icon">🔍</div>Sin resultados</div>';
+      return;
+    }
+
+    let html = '';
+    let lastArea = undefined;
+
+    filtered.forEach(r => {
+      const f      = r.fields;
+      const area   = (f.Area || '').trim();
+      const status = f.Status || '🟢';
+      const pct    = toPct(f.Progress);
+      const name   = esc(f.Task || f.Name || '(sin título)');
+      const lineId = f['ID'] ? `<div class="row-id">${f['ID']}</div>` : '';
+
+      if (activeArea === 'All' && area !== lastArea) {
+        const areaCount = filtered.filter(x => (x.fields.Area || '').trim() === area).length;
+        const label = area || 'Sin área';
+        html += `<div class="area-sep">
+          <div class="area-sep-label">${esc(label)}</div>
+          <div class="area-sep-line"></div>
+          <div class="area-sep-count">${areaCount}</div>
+        </div>`;
+        lastArea = area;
+      }
+
+      html += `<div class="row" onclick="openDetail('${r.id}')">
+        ${lineId}
+        <div class="row-status">${status}</div>
+        <div class="row-name">${name}</div>
+        <div class="circ-wrap">${makeCircSVG(pct, status, 32)}</div>
+      </div>`;
+    });
+
+    list.innerHTML = html;
+  }
+
+  function setStatusFilter(el) {
+    document.querySelectorAll('[data-filter-status]').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    activeStatus = el.dataset.filterStatus;
+    renderList();
+  }
+
+  function setAreaFilter(el) {
+    document.querySelectorAll('[data-filter-area]').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    activeArea = el.dataset.filterArea;
+    renderList();
+  }
+
+  function setSort(el) {
+    document.querySelectorAll('[data-sort]').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    activeSort = el.dataset.sort;
+    renderList();
+  }
+
+  function openDetail(id) {
+    viewingId = id;
+    const rec = allRecords.find(r => r.id === id);
+    if (!rec) return;
+    const f      = rec.fields;
+    const status = f.Status || '🟢';
+    const pct    = toPct(f.Progress);
+    document.getElementById('d-icon').textContent  = status;
+    document.getElementById('d-title').textContent = f.Task || f.Name || '(sin título)';
+    document.getElementById('d-circ').innerHTML    = makeCircSVG(pct, status, 80);
+    document.getElementById('d-fields').innerHTML  = [
+      { label: 'Línea #',       val: f['ID']          || '—' },
+      { label: 'Progreso',      val: pct + '%'               },
+      { label: 'Proyecto',      val: f.Project        || '—' },
+      { label: 'Área',          val: f.Area           || '—' },
+
+    ].map(fd => `<div class="detail-field${fd.full ? ' detail-field-full' : ''}">
+      <div class="detail-field-label">${fd.label}</div>
+      <div class="detail-field-value">${esc(String(fd.val))}</div>
+    </div>`).join('');
+    const alertVal  = (f.Alert  || '').trim();
+    const actionVal = (f.Action || '').trim();
+    const respVal   = Array.isArray(f.Responsible) ? f.Responsible : (f.Responsible ? [f.Responsible] : []);
+    document.getElementById('d-alert').innerHTML      = alertVal  ? esc(alertVal).replace(/\n/g,'<br>') : '<span class="detail-block-empty">Sin alertas</span>';
+    document.getElementById('d-action').innerHTML     = actionVal ? esc(actionVal).replace(/\n/g,'<br>') : '<span class="detail-block-empty">Sin acciones definidas</span>';
+    document.getElementById('d-responsible').innerHTML = respVal.length
+      ? respVal.map(r => `<span style="display:inline-block;font-size:12px;font-weight:500;padding:4px 10px;border-radius:20px;background:var(--accent);color:#fff;margin:2px 4px 2px 0;">${esc(r)}</span>`).join('')
+      : '<span class="detail-block-empty">Sin responsable asignado</span>';
+
+    const ganttPending = f.Gantt === true;
+    const ganttBlock = document.getElementById('d-gantt-block');
+    ganttBlock.classList.remove('block-gantt-pending', 'block-gantt-ok');
+    ganttBlock.classList.add(ganttPending ? 'block-gantt-pending' : 'block-gantt-ok');
+    document.getElementById('d-gantt').innerHTML = ganttPending
+      ? '⚠️ <strong>Pendiente de carga al Gantt</strong>'
+      : '<span style="color:var(--text3)">Al día — no requiere acción</span>';
+    document.getElementById('detail-overlay').classList.add('open');
+  }
+
+  function closeDetail() { document.getElementById('detail-overlay').classList.remove('open'); }
+  function closeSummary() {
+    document.getElementById('summary-overlay').classList.remove('open');
+  }
+
+  async function openSummary() {
+    const records = allRecords;
+    const total   = records.length;
+    const green   = records.filter(r => r.fields.Status === '🟢').length;
+    const yellow  = records.filter(r => r.fields.Status === '🟡').length;
+    const red     = records.filter(r => r.fields.Status === '🔴').length;
+    const avgPct  = total ? Math.round(records.reduce((s,r) => s + toPct(r.fields.Progress), 0) / total) : 0;
+
+    document.getElementById('summary-scope-label').textContent = 'Resumen del proyecto';
+    document.getElementById('summary-body').innerHTML = `
+      <div class="state-box" style="padding:2rem 1rem;">
+        <div style="font-size:28px;animation:spin 1s linear infinite;display:inline-block;">⟳</div>
+        <div style="margin-top:8px;font-size:13px;color:var(--text3);">Generando resumen con IA...</div>
+      </div>`;
+    document.getElementById('summary-overlay').classList.add('open');
+
+    const STATUS_LABEL = { '🟢': 'Verde (ok)', '🟡': 'Amarillo (atención)', '🔴': 'Rojo (bloqueado)' };
+
+    /* Group by area for richer context */
+    const byArea = {};
+    records.forEach(r => {
+      const area = r.fields.Area || 'Sin área';
+      if (!byArea[area]) byArea[area] = [];
+      byArea[area].push(r);
+    });
+
+    const areaBlocks = Object.entries(byArea).map(([area, recs]) => {
+      const lines = recs.map(r => {
+        const f    = r.fields;
+        const pct  = toPct(f.Progress);
+        const resp = Array.isArray(f.Responsible) ? f.Responsible.join(', ') : (f.Responsible || '—');
+        let line = `  [${f['ID']||'?'}] ${f.Task||'(sin nombre)'} | ${STATUS_LABEL[f.Status]||'—'} | Progreso: ${pct}% | Responsable: ${resp}`;
+        if (f.Alert)  line += `\n      ⚠ Alerta: ${f.Alert}`;
+        if (f.Action) line += `\n      → Acción: ${f.Action}`;
+        if (f.Gantt)  line += `\n      📋 Pendiente de carga al Gantt`;
+        return line;
+      }).join('\n');
+      return `ÁREA: ${area}\n${lines}`;
+    }).join('\n\n');
+
+    const prompt = `Eres un asistente experto en gestión de proyectos. Aquí está el estado completo del proyecto "Estación Central".
+
+ESTADÍSTICAS GLOBALES:
+- Total actividades: ${total} | Verde: ${green} | Amarillo: ${yellow} | Rojo: ${red}
+- Progreso promedio general: ${avgPct}%
+
+ESTADO DETALLADO POR ÁREA:
+${areaBlocks}
+
+Genera un resumen ejecutivo completo en español con estas secciones:
+
+1. **Estado general** — diagnóstico en 2-3 oraciones del estado del proyecto
+2. **Avances destacados** — áreas o tareas con buen progreso
+3. **Alertas críticas** — enumera cada alerta activa, su tarea y responsable
+4. **Acciones pendientes** — lista las acciones definidas que requieren seguimiento
+5. **Tareas pendientes de Gantt** — si las hay
+6. **Recomendación** — qué priorizar esta semana
+
+Sé directo, específico y profesional. Menciona nombres de tareas y responsables cuando sea relevante.`;
+
+    try {
+      const res  = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': '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',
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1500,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.map(b => b.text || '').join('') || 'No se pudo generar el resumen.';
+      const html = text
+        .replace(/^### (.+)$/gm, '<h3 style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin:16px 0 4px;">$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2 style="font-size:15px;font-weight:600;color:var(--text);margin:18px 0 6px;">$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1 style="font-size:17px;font-weight:600;color:var(--text);margin:18px 0 6px;">$1</h1>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^- (.+)$/gm, '<li style="margin:3px 0 3px 16px;">$1</li>')
+        .replace(/\n\n/g, '</p><p style="margin-top:8px">')
+        .replace(/\n/g, '<br>');
+      document.getElementById('summary-body').innerHTML = `
+        <div class="summary-scope-chip">Todas las áreas · ${total} actividades · ${avgPct}% promedio · 🔴${red} 🟡${yellow} 🟢${green}</div>
+        <div class="summary-text"><p>${html}</p></div>`;
+    } catch(e) {
+      document.getElementById('summary-body').innerHTML =
+        `<div class="error-box">Error: ${esc(e.message)}</div>`;
+    }
+  }
+
+  function switchToEdit() { closeDetail(); openEdit(viewingId); }
+
+  function openNew() {
+    editingId = null;
+    document.getElementById('form-title').textContent = 'Nueva actividad';
+    document.getElementById('f-task').value    = '';
+    document.getElementById('f-project').value = '';
+    document.getElementById('f-area').value    = '';
+    document.getElementById('f-alert').value        = '';
+    document.getElementById('f-action').value       = '';
+    document.getElementById('gantt-toggle').classList.remove('on');
+    document.querySelectorAll('.resp-opt').forEach(o => o.classList.remove('selected'));
+    document.querySelectorAll('.status-opt').forEach(o => o.classList.remove('selected'));
+    document.querySelector('.status-opt[data-val="🟢"]').classList.add('selected');
+    document.getElementById('f-progress').value     = 0;
+    document.getElementById('prog-val').textContent = '0%';
+    document.getElementById('form-overlay').classList.add('open');
+  }
+
+  function openEdit(id) {
+    editingId = id;
+    const rec = allRecords.find(r => r.id === id);
+    if (!rec) return;
+    const f = rec.fields;
+    document.getElementById('form-title').textContent = 'Editar actividad';
+    document.getElementById('f-task').value    = f.Task    || f.Name || '';
+    document.getElementById('f-project').value = f.Project || '';
+    document.getElementById('f-area').value    = f.Area    || '';
+    document.getElementById('f-alert').value        = f.Alert       || '';
+    document.getElementById('f-action').value       = f.Action      || '';
+    const gt = document.getElementById('gantt-toggle');
+    f.Gantt ? gt.classList.add('on') : gt.classList.remove('on');
+    document.querySelectorAll('.resp-opt').forEach(o => o.classList.remove('selected'));
+    const selected = Array.isArray(f.Responsible) ? f.Responsible : (f.Responsible ? [f.Responsible] : []);
+    selected.forEach(val => {
+      const el = document.querySelector(`.resp-opt[data-val="${val}"]`);
+      if (el) el.classList.add('selected');
+    });
+    document.querySelectorAll('.status-opt').forEach(o => o.classList.remove('selected'));
+    const sel = document.querySelector(`.status-opt[data-val="${f.Status || '🟢'}"]`);
+    if (sel) sel.classList.add('selected');
+    const prog = toPct(f.Progress);
+    document.getElementById('f-progress').value     = prog;
+    document.getElementById('prog-val').textContent = prog + '%';
+    document.getElementById('form-overlay').classList.add('open');
+  }
+
+  function closeForm() { document.getElementById('form-overlay').classList.remove('open'); }
+
+  function onSearch() {
+    searchQuery = document.getElementById('search-input').value.trim();
+    document.getElementById('search-clear').style.display = searchQuery ? 'block' : 'none';
+    renderList();
+  }
+
+  function clearSearch() {
+    document.getElementById('search-input').value = '';
+    searchQuery = '';
+    document.getElementById('search-clear').style.display = 'none';
+    renderList();
+  }
+
+  function toggleGantt() {
+    document.getElementById('gantt-toggle').classList.toggle('on');
+  }
+
+  function toggleResp(el) {
+    el.classList.toggle('selected');
+  }
+
+  function pickStatus(el) {
+    document.querySelectorAll('.status-opt').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  async function saveRecord() {
+    const btn = document.getElementById('save-btn');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    const selStatus = document.querySelector('.status-opt.selected');
+    const pctVal    = parseInt(document.getElementById('f-progress').value);
+    const fields = {
+      Task:     document.getElementById('f-task').value.trim(),
+      Project:  document.getElementById('f-project').value.trim(),
+      Area:     document.getElementById('f-area').value.trim(),
+      Status:   selStatus ? selStatus.dataset.val : '🟢',
+      Progress: pctVal / 100,
+      Alert:       document.getElementById('f-alert').value.trim(),
+      Action:      document.getElementById('f-action').value.trim(),
+      Gantt:       document.getElementById('gantt-toggle').classList.contains('on'),
+      Responsible: [...document.querySelectorAll('.resp-opt.selected')].map(o => o.dataset.val),
+    };
+    try {
+      const res = await fetch(editingId ? `${API_URL}/${editingId}` : API_URL, {
+        method: editingId ? 'PATCH' : 'POST',
+        headers: HEADERS, body: JSON.stringify({ fields })
+      });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error.message); return; }
+      if (editingId) {
+        const idx = allRecords.findIndex(r => r.id === editingId);
+        if (idx !== -1) allRecords[idx] = data;
+      } else {
+        allRecords.unshift(data);
+      }
+      closeForm(); buildAreaChips(); renderList();
+    } catch(e) { alert('Error: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+  }
+
+  async function deleteRecord() {
+    if (!viewingId || !confirm('¿Eliminar esta actividad?')) return;
+    try {
+      const res  = await fetch(`${API_URL}/${viewingId}`, { method: 'DELETE', headers: HEADERS });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error.message); return; }
+      allRecords = allRecords.filter(r => r.id !== viewingId);
+      closeDetail(); buildAreaChips(); renderList();
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  async function loadRecords() {
+    const btn = document.getElementById('refresh-btn');
+    btn.classList.add('spinning');
+    try {
+      let records = [], offset = null;
+      do {
+        const url  = API_URL + '?pageSize=100' + (offset ? '&offset=' + offset : '');
+        const res  = await fetch(url, { headers: HEADERS });
+        const data = await res.json();
+        if (data.error) { showError(data.error.message); return; }
+        records = records.concat(data.records || []);
+        offset  = data.offset || null;
+      } while (offset);
+      allRecords = records;
+      buildAreaChips();
+      renderList();
+    } catch(e) { showError(e.message); }
+    finally { btn.classList.remove('spinning'); }
+  }
+
+  function showError(msg) {
+    document.getElementById('list').innerHTML = `<div class="error-box">Error: ${esc(msg)}</div>`;
+  }
+
+  function handleOverlay(e, id) {
+    if (e.target === document.getElementById(id))
+      document.getElementById(id).classList.remove('open');
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  loadRecords();
+</script>
+</body>
+</html>
