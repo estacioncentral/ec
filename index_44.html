@@ -1,0 +1,2966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Estacion Central</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: rgba(0,0,0,0.08);
+    --text: #1a1a18;
+    --text2: #6b6b66;
+    --text3: #9e9e99;
+    --accent: #1a1a18;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 90px;
+  }
+
+  .header {
+    background: var(--bg);
+    padding: 52px 20px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 10px;
+  }
+
+  .title-group { flex: 1; min-width: 0; }
+
+  .title-station {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text3);
+    margin-bottom: 2px;
+  }
+
+  .title-area {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+    transition: opacity 0.15s;
+  }
+
+  /* Status summary pill row */
+  .status-summary {
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+    align-items: center;
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text2);
+  }
+
+  .status-pill-icon { font-size: 13px; line-height: 1; }
+  .status-pill-count { font-weight: 500; min-width: 10px; }
+
+  .status-summary-sep {
+    width: 1px; height: 12px;
+    background: var(--border);
+  }
+
+  .status-total {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text3);
+  }
+
+  .icon-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .icon-btn:active { transform: scale(0.92); background: var(--surface2); }
+  .spinning { animation: spin 0.5s linear; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toolbar-row {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    align-items: center;
+  }
+  .toolbar-row + .toolbar-row { margin-top: 6px; }
+  .toolbar-row::-webkit-scrollbar { display: none; }
+
+  .toolbar-label {
+    flex-shrink: 0;
+    font-size: 10px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--text3);
+    padding-right: 2px;
+  }
+
+  .chip {
+    flex-shrink: 0;
+    font-size: 12px; font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.12s;
+    font-family: 'DM Sans', sans-serif;
+    white-space: nowrap;
+  }
+  .chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .chip:active { transform: scale(0.95); }
+  .divider { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; margin: 0 2px; }
+
+  /* Hub button */
+  .hub-btn { width: 18px; height: 18px; border: none; background: none; color: var(--text3); font-size: 11px; cursor: pointer; padding: 0; flex-shrink: 0; display: flex; align-items: center; justify-content: center; letter-spacing: 0; }
+  .hub-btn:active { opacity: 0.6; }
+
+  /* Drawer */
+  .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 500; }
+  .drawer-overlay.open { display: block; }
+  .drawer { position: fixed; top: 0; left: -280px; width: 280px; height: 100vh; background: var(--surface); z-index: 501; transition: left 0.25s ease; padding: 52px 20px 20px; box-shadow: 4px 0 20px rgba(0,0,0,0.12); display: flex; flex-direction: column; }
+  .drawer.open { left: 0; }
+  .drawer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .drawer-title { font-size: 20px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; margin-bottom: 24px; }
+  .drawer-apps { display: flex; flex-direction: column; gap: 6px; }
+  .drawer-app { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius-sm); cursor: pointer; transition: background 0.12s; border: 1px solid transparent; }
+  .drawer-app:active { background: var(--surface2); }
+  .drawer-app.active { background: var(--surface2); border-color: var(--border); }
+  .drawer-app-icon { font-size: 20px; flex-shrink: 0; }
+  .drawer-app-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .drawer-app-meta { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
+
+  /* Cotizaciones list */
+  .cotiz-row { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 7px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: transform 0.1s; min-height: 48px; }
+  .cotiz-row:active { transform: scale(0.99); background: var(--surface2); }
+  .cotiz-status { font-size: 16px; flex-shrink: 0; }
+  .cotiz-info { flex: 1; min-width: 0; }
+  .cotiz-name { font-size: 14px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cotiz-vendor { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .cotiz-amount { font-size: 13px; font-weight: 600; font-family: 'DM Mono', monospace; color: var(--text); flex-shrink: 0; }
+
+
+
+  .content { padding: 10px 20px 0; }
+
+  .search-wrap {
+    padding: 10px 20px 0;
+    position: sticky;
+    top: var(--header-h, 170px);
+    z-index: 9;
+    background: var(--bg);
+    padding-bottom: 8px;
+  }
+  .search-inner {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0 12px;
+    height: 40px;
+  }
+  .search-inner:focus-within { border-color: #2563eb; }
+  .search-inner input {
+    flex: 1; border: none; background: transparent;
+    font-family: 'DM Sans', sans-serif; font-size: 14px;
+    color: var(--text); outline: none;
+    padding: 0;
+  }
+  .search-inner input::placeholder { color: var(--text3); }
+  #search-clear {
+    background: none; border: none; cursor: pointer;
+    color: var(--text3); font-size: 13px; padding: 0;
+    line-height: 1; flex-shrink: 0;
+  }
+  #search-clear:hover { color: var(--text2); }
+
+  .row-highlight { background: #fef9c3; }
+
+  /* Area separator */
+  .area-sep {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0 8px;
+  }
+  .area-sep:first-child { margin-top: 2px; }
+  .area-sep-label {
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.7px;
+    color: var(--text3);
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .area-sep-line { flex: 1; height: 1px; background: var(--border); }
+  .area-sep-count { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); flex-shrink: 0; }
+
+  .row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 7px;
+    padding: 10px 12px;
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer;
+    transition: transform 0.1s;
+    min-height: 48px;
+  }
+  .row:active { transform: scale(0.99); background: var(--surface2); }
+
+  .row-id { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); flex-shrink: 0; min-width: 18px; text-align: right; }
+  .row-status { font-size: 16px; flex-shrink: 0; line-height: 1; }
+  .row-name { flex: 1; font-size: 14px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .circ-wrap { flex-shrink: 0; width: 32px; height: 32px; }
+
+  .state-box { text-align: center; padding: 4rem 1rem; color: var(--text3); font-size: 14px; }
+  .state-icon { font-size: 32px; margin-bottom: 12px; }
+
+  .error-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); padding: 12px 16px; font-size: 13px; color: #dc2626; margin-bottom: 16px; }
+
+  .fab { position: fixed; bottom: 24px; right: 20px; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,0.18); transition: transform 0.15s; z-index: 20; }
+  .fab:active { transform: scale(0.92); }
+  .fab-ai { position: fixed; bottom: 24px; left: 20px; width: auto; min-width: 52px; padding: 0 16px; height: 52px; border-radius: 26px; background: var(--surface); color: var(--text); border: 1px solid var(--border); font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.10); transition: transform 0.15s; z-index: 20; white-space: nowrap; }
+  .fab-ai:active { transform: scale(0.96); background: var(--surface2); }
+  .fab-ai-icon { font-size: 16px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; align-items: flex-end; justify-content: center; }
+  .modal-overlay.layer2 { z-index: 200; }
+  .modal-overlay.layer3 { z-index: 300; }
+  .modal-overlay.layer4 { z-index: 400; }
+  .modal { background: var(--surface); border-radius: var(--radius) var(--radius) 0 0; padding: 16px 20px 40px; width: 100%; max-width: 480px; animation: slideUp 0.2s ease; max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  .modal-overlay.open { display: flex; }
+
+  @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 4px; margin: 0 auto 16px; }
+  .modal-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .modal-top .modal-handle { margin: 0; }
+  .btn-close { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; line-height: 1; }
+  .btn-close:active { background: var(--border); transform: scale(0.92); }
+
+  .detail-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+  .detail-status-icon { font-size: 28px; margin-top: 2px; flex-shrink: 0; }
+  .detail-title { font-size: 20px; font-weight: 600; color: var(--text); line-height: 1.35; flex: 1; word-break: break-word; white-space: normal; }
+
+  .detail-circ-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 20px; }
+  .detail-circ-label { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
+
+  .detail-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .detail-field { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 12px; }
+  .detail-field-full { grid-column: 1 / -1; }
+  .detail-field-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text3); font-weight: 500; margin-bottom: 4px; }
+  .detail-field-value { font-size: 14px; font-weight: 500; color: var(--text); }
+
+  .detail-block { border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 10px; }
+  .detail-block-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500; margin-bottom: 6px; }
+  .detail-block-value { font-size: 14px; line-height: 1.55; color: var(--text); }
+  .detail-block-empty { font-size: 13px; font-style: italic; }
+
+  .block-alert { background: #fffbeb; border: 1px solid #fde68a; }
+  .block-alert .detail-block-label { color: #92400e; }
+  .block-alert .detail-block-empty { color: #d97706; }
+
+  .block-action { background: #eff6ff; border: 1px solid #bfdbfe; }
+  .block-action .detail-block-label { color: #1e3a8a; }
+
+  /* Actions linked list */
+  .actions-block { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 10px; }
+  .actions-block-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .actions-block-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; color: #1e3a8a; }
+  .btn-add-action { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; border: 1px solid #bfdbfe; background: #fff; color: #1e3a8a; cursor: pointer; }
+  .btn-add-action:active { opacity: 0.7; }
+
+  .action-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #fff; border-radius: var(--radius-sm); margin-bottom: 6px; cursor: pointer; border: 0.5px solid #bfdbfe; transition: transform 0.1s; }
+  .action-row:last-child { margin-bottom: 0; }
+  .action-row:active { transform: scale(0.98); }
+  .action-row-status { font-size: 14px; flex-shrink: 0; }
+  .action-row-name { flex: 1; font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .action-row-arrow { font-size: 11px; color: #93c5fd; flex-shrink: 0; }
+  .actions-empty { font-size: 12px; color: #93c5fd; font-style: italic; text-align: center; padding: 8px 0; }
+
+  /* Action detail sheet */
+  .action-detail-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
+  .action-detail-status { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+  .action-detail-title { font-size: 18px; font-weight: 600; color: var(--text); line-height: 1.3; flex: 1; word-break: break-word; }
+  .action-desc { font-size: 14px; line-height: 1.65; color: var(--text2); margin-bottom: 18px; white-space: pre-wrap; }
+
+  /* Module cards */
+  .modules-section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; color: var(--text3); margin-bottom: 8px; }
+  .module-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 8px; cursor: pointer; transition: transform 0.1s; }
+  .module-card:active { transform: scale(0.98); }
+  .module-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .module-card-type { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; color: var(--text3); }
+  .module-card-title { font-size: 14px; font-weight: 500; color: var(--text); }
+  .module-card-arrow { font-size: 11px; color: var(--text3); }
+  .btn-add-module { width: 100%; height: 38px; border: 1px dashed var(--border); background: transparent; border-radius: var(--radius-sm); font-size: 13px; color: var(--text3); cursor: pointer; font-family: 'DM Sans', sans-serif; margin-top: 4px; }
+  .btn-add-module:active { background: var(--surface2); }
+
+  /* Module picker */
+  .module-opt { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer; transition: all 0.12s; }
+  .module-opt:active { transform: scale(0.98); }
+  .module-opt-icon { font-size: 20px; flex-shrink: 0; }
+  .module-opt-label { font-size: 14px; font-weight: 500; color: var(--text); }
+  .module-opt-desc { font-size: 12px; color: var(--text3); margin-top: 1px; }
+
+  /* Module views */
+  .module-view-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600; color: var(--text3); margin-bottom: 10px; }
+  .decision-opt { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 7px; cursor: pointer; transition: all 0.12s; }
+  .decision-opt.chosen { background: #f0fdf4; border-color: #86efac; }
+  .decision-opt-check { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .decision-opt.chosen .decision-opt-check { background: #16a34a; border-color: #16a34a; color: #fff; }
+  .decision-opt-text { font-size: 14px; color: var(--text); flex: 1; }
+
+  .quote-row { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 7px; }
+  .quote-row-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .quote-vendor { font-size: 14px; font-weight: 500; color: var(--text); }
+  .quote-amount { font-size: 14px; font-weight: 600; color: var(--text); font-family: 'DM Mono', monospace; }
+  .quote-status { font-size: 11px; color: var(--text3); }
+  .quote-notes { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+  .block-responsible { background: var(--surface2); border: 1px solid var(--border); }
+  .block-responsible .detail-block-label { color: var(--text3); }
+  .block-responsible .detail-block-empty { color: var(--text3); font-style: italic; }
+
+  .block-gantt { border: 1px solid var(--border); }
+  .block-gantt .detail-block-label { color: var(--text3); }
+  .block-gantt-pending { background: #fffbeb; border-color: #fde68a !important; }
+  .block-gantt-pending .detail-block-label { color: #92400e !important; }
+  .block-gantt-ok { background: var(--surface2); }
+
+  .gantt-toggle {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 12px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--surface2); cursor: pointer;
+    transition: all 0.15s; user-select: none;
+  }
+  .gantt-toggle.on { background: #fffbeb; border-color: #fde68a; }
+  .gantt-toggle-box {
+    width: 20px; height: 20px; border-radius: 5px; flex-shrink: 0;
+    border: 1.5px solid var(--border); background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; transition: all 0.15s;
+  }
+  .gantt-toggle.on .gantt-toggle-box { background: #d97706; border-color: #d97706; color: #fff; }
+  .gantt-toggle-box::after { content: ''; }
+  .gantt-toggle.on .gantt-toggle-box::after { content: '✓'; color: #fff; font-weight: 600; font-size: 12px; }
+  #gantt-toggle-label { font-size: 14px; color: var(--text2); }
+  .gantt-toggle.on #gantt-toggle-label { color: #92400e; font-weight: 500; }
+
+  .resp-picker { display: flex; flex-wrap: wrap; gap: 7px; }
+  .resp-opt {
+    font-size: 12px; font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.12s;
+    user-select: none;
+  }
+  .resp-opt.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .resp-opt:active { transform: scale(0.95); }
+
+  .detail-actions { display: flex; gap: 8px; margin-top: 16px; }
+
+  .modal h2 { font-size: 17px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+  .form-row { margin-bottom: 12px; }
+  .form-row label { display: block; font-size: 10px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 5px; }
+  .form-row input, .form-row select, .form-row textarea { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; padding: 10px 12px; outline: none; transition: border-color 0.15s; }
+  .form-row input, .form-row select { height: 42px; padding: 0 12px; }
+  .form-row textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: #2563eb; background: #fff; }
+
+  .status-picker { display: flex; gap: 8px; }
+  .status-opt { flex: 1; height: 42px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.12s; }
+  .status-opt.selected { border: 2px solid var(--accent); background: var(--surface); }
+  .status-opt:active { transform: scale(0.94); }
+
+  .slider-row { display: flex; align-items: center; gap: 10px; }
+  .slider-row input[type=range] { flex: 1; height: 4px; -webkit-appearance: none; background: var(--surface2); border-radius: 4px; border: none; padding: 0; }
+  .slider-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); cursor: pointer; }
+  .slider-val { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--text2); min-width: 34px; text-align: right; }
+
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .btn-cancel { flex: 1; height: 44px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; cursor: pointer; }
+  .btn-save { flex: 2; height: 44px; border: none; background: var(--accent); color: #fff; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; transition: opacity 0.15s; }
+  .btn-danger { flex: 1; height: 44px; border: none; background: #fef2f2; color: #dc2626; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; cursor: pointer; }
+  .btn-edit { flex: 2; height: 44px; border: none; background: var(--accent); color: #fff; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; cursor: pointer; }
+  .btn-summary { flex: 1; height: 44px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .btn-summary:active { opacity: 0.7; }
+
+  .summary-text { font-size: 14px; line-height: 1.65; color: var(--text); }
+  .summary-section { margin-bottom: 14px; }
+  .summary-section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text3); margin-bottom: 6px; }
+  .summary-scope-chip { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; background: var(--surface2); color: var(--text2); border: 1px solid var(--border); margin-bottom: 14px; }
+  .btn-save:disabled { opacity: 0.5; }
+  .btn-cancel:active, .btn-danger:active { opacity: 0.7; }
+  .btn-save:active, .btn-edit:active { opacity: 0.8; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-row">
+    <div class="title-group">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="hub-btn" onclick="openDrawer()" title="Hub">&#9776;</button>
+        <div class="title-station">Estación Central</div>
+      </div>
+      <div class="title-area" id="title-area">Todas las Actividades</div>
+      <div class="status-summary" id="status-summary"></div>
+    </div>
+    <button class="icon-btn" id="refresh-btn" onclick="refreshCurrentApp()" title="Refresh">↻</button>
+  </div>
+
+  <div id="actividades-toolbar">
+  <div class="toolbar-row">
+    <span class="toolbar-label">Status</span>
+    <div class="chip active" data-filter-status="🔴" onclick="toggleStatusFilter(this)">🔴</div>
+    <div class="chip active" data-filter-status="🟡" onclick="toggleStatusFilter(this)">🟡</div>
+    <div class="chip active" data-filter-status="🟢" onclick="toggleStatusFilter(this)">🟢</div>
+    <div class="chip" data-filter-status="🔵" onclick="toggleStatusFilter(this)">🔵</div>
+    <div class="chip" data-filter-status="〇" onclick="toggleStatusFilter(this)">〇</div>
+    <div class="divider"></div>
+    <span class="toolbar-label">Sort</span>
+    <div class="chip active" data-sort="id" onclick="setSort(this)">Line #</div>
+    <div class="chip" data-sort="status" onclick="setSort(this)">Status</div>
+    <div class="chip" data-sort="progress" onclick="setSort(this)">Progress</div>
+  </div>
+
+  <div class="toolbar-row" id="area-toolbar">
+    <span class="toolbar-label">Area</span>
+    <div class="chip active" data-filter-area="All" onclick="setAreaFilter(this)">All</div>
+  </div>
+  </div>
+</div>
+
+<div class="search-wrap">
+  <div class="search-inner">
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style="flex-shrink:0;opacity:0.4">
+      <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/>
+      <line x1="10.5" y1="10.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <input type="text" id="search-input" placeholder="Buscar actividades..." oninput="onSearch()" autocomplete="off" autocorrect="off" spellcheck="false">
+    <button id="search-clear" onclick="clearSearch()" style="display:none;">✕</button>
+  </div>
+</div>
+
+<div class="content" id="list">
+  <div class="state-box"><div class="state-icon">⏳</div>Cargando...</div>
+</div>
+
+<button class="fab" id="fab-new" onclick="openNew()">+</button>
+<button class="fab-ai" id="fab-ai" onclick="openSummary()"><span class="fab-ai-icon">✦</span> Resumen IA</button>
+<button class="fab" id="fab-cotiz" onclick="openNewCotiz()" style="display:none;">+</button>
+<button class="fab" id="fab-bp" onclick="openNewBp()" style="display:none;">+</button>
+
+<!-- Detail modal -->
+<div class="modal-overlay layer2" id="detail-overlay" onclick="closeDetail()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-top">
+      <div class="modal-handle"></div>
+      <button class="btn-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="detail-header">
+      <div class="detail-status-icon" id="d-icon"></div>
+      <div class="detail-title" id="d-title"></div>
+    </div>
+    <div class="detail-circ-wrap">
+      <div id="d-circ"></div>
+      <div class="detail-circ-label">progreso</div>
+    </div>
+    <div class="detail-fields" id="d-fields"></div>
+    <div class="detail-block block-alert">
+      <div class="detail-block-label">Alerta</div>
+      <div class="detail-block-value" id="d-alert"></div>
+    </div>
+    <!-- Actions linked list -->
+    <div class="actions-block">
+      <div class="actions-block-header">
+        <div class="actions-block-label">Acciones</div>
+        <button class="btn-add-action" onclick="openNewAction()">+ Nueva</button>
+      </div>
+      <div id="d-actions-list"></div>
+    </div>
+    <div class="detail-block block-responsible">
+      <div class="detail-block-label">Responsable</div>
+      <div class="detail-block-value" id="d-responsible"></div>
+    </div>
+    <div class="detail-block block-gantt" id="d-gantt-block">
+      <div class="detail-block-label">Gantt</div>
+      <div class="detail-block-value" id="d-gantt"></div>
+    </div>
+    <div class="detail-actions">
+      <button class="btn-danger" onclick="deleteWithPassword()">Eliminar</button>
+      <button class="btn-edit" onclick="switchToEdit()">Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Summary modal -->
+<div class="modal-overlay layer2" id="summary-overlay" onclick="closeSummary()">
+  <div class="modal" onclick="event.stopPropagation()" style="max-height:85vh;">
+    <div class="modal-top">
+      <div class="modal-handle"></div>
+      <button class="btn-close" onclick="closeSummary()">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <span style="font-size:18px;">✦</span>
+      <h2 style="margin:0;" id="summary-scope-label">Resumen del proyecto</h2>
+    </div>
+    <div id="summary-body">
+      <div class="state-box" style="padding:2rem 1rem;">
+        <div class="state-icon" id="summary-spinner" style="animation:spin 1s linear infinite;display:inline-block;">⟳</div>
+        <div style="margin-top:8px;font-size:13px;">Generando resumen...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Action detail sheet -->
+<div class="modal-overlay layer3" id="action-detail-overlay" onclick="closeActionDetail()">
+  <div class="modal" onclick="event.stopPropagation()" style="max-height:92vh;">
+    <div class="modal-top">
+      <div class="modal-handle"></div>
+      <button class="btn-close" onclick="closeActionDetail()">✕</button>
+    </div>
+    <div class="action-detail-header">
+      <div class="action-detail-status" id="ad-status"></div>
+      <div class="action-detail-title" id="ad-title"></div>
+    </div>
+    <div class="action-desc" id="ad-desc"></div>
+    <div class="modules-section-label">Módulos</div>
+    <div id="ad-modules"></div>
+    <button class="btn-add-module" onclick="openModulePicker()">+ Agregar módulo</button>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn-cancel" onclick="openEditAction()">Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Action form sheet -->
+<div class="modal-overlay layer4" id="action-form-overlay" onclick="handleOverlay(event,'action-form-overlay')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <h2 id="action-form-title">Nueva acción</h2>
+    <div class="form-row"><label>Nombre</label><input type="text" id="af-name" placeholder="Título de la acción"></div>
+    <div class="form-row"><label>Descripción</label><textarea id="af-desc" placeholder="Describe la acción en detalle..." style="min-height:90px;"></textarea></div>
+    <div class="form-row">
+      <label>Status</label>
+      <div class="status-picker">
+        <div class="status-opt selected" data-val="🟢" onclick="pickStatus(this)">🟢</div>
+        <div class="status-opt" data-val="🟡" onclick="pickStatus(this)">🟡</div>
+        <div class="status-opt" data-val="🔴" onclick="pickStatus(this)">🔴</div>
+        <div class="status-opt" data-val="🔵" onclick="pickStatus(this)">🔵</div>
+        <div class="status-opt" data-val="〇" onclick="pickStatus(this)">〇</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeActionForm()">Cancelar</button>
+      <button class="btn-save" id="action-save-btn" onclick="saveAction()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Module picker sheet -->
+<div class="modal-overlay layer4" id="module-picker-overlay" onclick="handleOverlay(event,'module-picker-overlay')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <h2>Agregar módulo</h2>
+    <div class="module-opt" onclick="addModule('Decision Visual')">
+      <div class="module-opt-icon">🖼️</div>
+      <div><div class="module-opt-label">Decisión visual</div><div class="module-opt-desc">Comparar imágenes y seleccionar opción</div></div>
+    </div>
+    <div class="module-opt" onclick="addModule('Quote')">
+      <div class="module-opt-icon">💰</div>
+      <div><div class="module-opt-label">Cotización</div><div class="module-opt-desc">Comparar proveedores y precios</div></div>
+    </div>
+    <div class="module-opt" onclick="addModule('Notes')">
+      <div class="module-opt-icon">📝</div>
+      <div><div class="module-opt-label">Notas</div><div class="module-opt-desc">Texto libre, referencias, links</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Module view sheet -->
+<div class="modal-overlay layer4" id="module-view-overlay" onclick="handleOverlay(event,'module-view-overlay')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-height:92vh;">
+    <div class="modal-top">
+      <div class="modal-handle"></div>
+      <button class="btn-close" onclick="closeModuleView()">✕</button>
+    </div>
+    <div id="module-view-content"></div>
+  </div>
+</div>
+<input type="file" id="asset-file-input" accept="image/*" style="display:none;" onchange="handleImageUpload(event)">
+
+<!-- Task form modal -->
+<div class="modal-overlay layer2" id="form-overlay">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-top">
+      <div class="modal-handle"></div>
+      <button class="btn-close" onclick="closeForm()">✕</button>
+    </div>
+    <h2 id="form-title">Nueva actividad</h2>
+    <div class="form-row"><label>Task</label><input type="text" id="f-task" placeholder="¿Qué hay que hacer?"></div>
+    <div class="form-row"><label>Project</label><input type="text" id="f-project" placeholder="Nombre del proyecto"></div>
+    <div class="form-row"><label>Area</label><input type="text" id="f-area" placeholder="Área o equipo"></div>
+    <div class="form-row">
+      <label>Status</label>
+      <div class="status-picker">
+        <div class="status-opt selected" data-val="🟢" onclick="pickStatus(this)">🟢</div>
+        <div class="status-opt" data-val="🟡" onclick="pickStatus(this)">🟡</div>
+        <div class="status-opt" data-val="🔴" onclick="pickStatus(this)">🔴</div>
+        <div class="status-opt" data-val="🔵" onclick="pickStatus(this)">🔵</div>
+        <div class="status-opt" data-val="〇" onclick="pickStatus(this)">〇</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Progress</label>
+      <div class="slider-row">
+        <input type="range" min="0" max="100" step="1" value="0" id="f-progress"
+          oninput="document.getElementById('prog-val').textContent=this.value+'%'">
+        <span class="slider-val" id="prog-val">0%</span>
+      </div>
+    </div>
+    <div class="form-row"><label>Alert</label><textarea id="f-alert" placeholder="¿Algún bloqueo o alerta?"></textarea></div>
+    <div class="form-row">
+      <label>Gantt</label>
+      <div class="gantt-toggle" onclick="toggleGantt()" id="gantt-toggle">
+        <div class="gantt-toggle-box" id="gantt-toggle-box"></div>
+        <span id="gantt-toggle-label">Pendiente de carga al Gantt</span>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Responsible</label>
+      <div class="resp-picker" id="resp-picker">
+        <div class="resp-opt" data-val="Juan José (Metamorfosis)" onclick="toggleResp(this)">Juan José (Metamorfosis)</div>
+        <div class="resp-opt" data-val="Justo (Metamorfosis)" onclick="toggleResp(this)">Justo (Metamorfosis)</div>
+        <div class="resp-opt" data-val="Laura (PLAN-O)" onclick="toggleResp(this)">Laura (PLAN-O)</div>
+        <div class="resp-opt" data-val="Jose Camilo (PLAN-O)" onclick="toggleResp(this)">Jose Camilo (PLAN-O)</div>
+        <div class="resp-opt" data-val="Robin Maestro (PLAN-O)" onclick="toggleResp(this)">Robin Maestro (PLAN-O)</div>
+        <div class="resp-opt" data-val="Nett Hernández" onclick="toggleResp(this)">Nett Hernández</div>
+        <div class="resp-opt" data-val="Julian (Central Cervecera)" onclick="toggleResp(this)">Julian (Central Cervecera)</div>
+        <div class="resp-opt" data-val="Otro" onclick="toggleResp(this)">Otro</div>
+      </div>
+    </div>
+    <!-- Actions section — button always visible, list revealed after draft saved -->
+    <div style="margin-top:4px;">
+      <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+      <div class="actions-block" style="margin-bottom:0;">
+        <div class="actions-block-header">
+          <div class="actions-block-label">Acciones</div>
+          <button class="btn-add-action" onclick="openNewActionFromForm()">+ Nueva acción</button>
+        </div>
+        <div id="form-actions-section" style="display:none;">
+          <div id="form-actions-list"><div class="actions-empty">Sin acciones todavía</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn-cancel" onclick="closeForm()">Cancelar</button>
+      <button class="btn-save" id="save-btn" onclick="handleFormPrimary()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hub Drawer -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3);">Hub</div>
+    <button class="btn-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-title">Estación Central</div>
+  <div class="drawer-apps">
+    <div class="drawer-app active" id="drawer-app-actividades" onclick="switchApp('actividades')">
+      <div class="drawer-app-icon">📋</div>
+      <div class="drawer-app-info">
+        <div class="drawer-app-name">Actividades</div>
+        <div class="drawer-app-meta" id="drawer-meta-actividades">Cargando...</div>
+      </div>
+    </div>
+    <div class="drawer-app" id="drawer-app-cotizaciones" onclick="switchApp('cotizaciones')">
+      <div class="drawer-app-icon">💰</div>
+      <div class="drawer-app-info">
+        <div class="drawer-app-name">Cotizaciones</div>
+        <div class="drawer-app-meta" id="drawer-meta-cotizaciones">Cargando...</div>
+      </div>
+    </div>
+    <div class="drawer-app" id="drawer-app-blueprints" onclick="switchApp('blueprints')">
+      <div class="drawer-app-icon">📐</div>
+      <div class="drawer-app-info">
+        <div class="drawer-app-name">Diseños / Planos</div>
+        <div class="drawer-app-meta" id="drawer-meta-blueprints">Cargando...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Blueprints App -->
+<div id="app-blueprints" style="display:none;">
+  <div class="content" id="bp-list">
+    <div class="state-box"><div class="state-icon">⏳</div>Cargando...</div>
+  </div>
+</div>
+
+<!-- Blueprints Detail Modal -->
+<div class="modal-overlay layer2" id="bp-detail-overlay" onclick="closeBpDetail()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-top">
+      <div class="modal-handle"></div>
+      <button class="btn-close" onclick="closeBpDetail()">✕</button>
+    </div>
+    <div id="bp-detail-content"></div>
+    <div class="detail-actions" style="margin-top:16px;">
+      <button class="btn-edit" onclick="openEditBp()">Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Blueprints Form Modal -->
+<div class="modal-overlay layer3" id="bp-form-overlay" onclick="handleOverlay(event,'bp-form-overlay')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <h2 id="bp-form-title">Nuevo diseño</h2>
+    <div class="form-row"><label>Nombre</label><input type="text" id="bf-name" placeholder="Nombre del plano o diseño"></div>
+    <div class="form-row">
+      <label>Status</label>
+      <div class="status-picker" id="bp-status-picker">
+        <div class="status-opt selected" data-val="🟢" onclick="pickStatus(this)">🟢</div>
+        <div class="status-opt" data-val="🟡" onclick="pickStatus(this)">🟡</div>
+        <div class="status-opt" data-val="🔴" onclick="pickStatus(this)">🔴</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Type</label>
+      <select id="bf-type">
+        <option value="">— Seleccionar —</option>
+        <option>RVT</option>
+        <option>CAD</option>
+        <option>PDF</option>
+        <option>IMG</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Discipline</label>
+      <select id="bf-discipline">
+        <option value="">— Seleccionar —</option>
+        <option>Arquitectura</option>
+        <option>Estructuras</option>
+        <option>MEP</option>
+        <option>Interiorismo</option>
+        <option>Fachada</option>
+        <option>Paisajismo</option>
+        <option>Otro</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Version</label><input type="text" id="bf-version" placeholder="v1.0"></div>
+    <div class="form-row"><label>Date</label><input type="date" id="bf-date"></div>
+    <div class="form-row"><label>Viewer URL</label><input type="url" id="bf-viewer" placeholder="https://..."></div>
+    <div class="form-row">
+      <label>Area</label>
+      <div class="resp-picker" id="bp-areas-picker"></div>
+    </div>
+    <div class="form-row"><label>Notes</label><textarea id="bf-notes" placeholder="Notas adicionales..." style="min-height:60px;"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeBpForm()">Cancelar</button>
+      <button class="btn-save" id="bp-save-btn" onclick="saveBp()">Guardar</button>
+    </div>
+  </div>
+</div>
+<div id="app-cotizaciones" style="display:none;">
+  <div class="content" id="cotiz-list">
+    <div class="state-box"><div class="state-icon">⏳</div>Cargando...</div>
+  </div>
+</div>
+
+<!-- Cotizaciones Detail Modal -->
+<div class="modal-overlay layer2" id="cotiz-detail-overlay" onclick="closeCotizDetail()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-top">
+      <div class="modal-handle"></div>
+      <button class="btn-close" onclick="closeCotizDetail()">✕</button>
+    </div>
+    <div id="cotiz-detail-content"></div>
+    <div class="detail-actions" style="margin-top:16px;">
+      <button class="btn-edit" onclick="openEditCotiz()">Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cotizaciones Form Modal -->
+<div class="modal-overlay layer3" id="cotiz-form-overlay" onclick="handleOverlay(event,'cotiz-form-overlay')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <h2 id="cotiz-form-title">Nueva cotización</h2>
+    <div class="form-row"><label>Nombre</label><input type="text" id="cf-name" placeholder="Nombre de la cotización"></div>
+    <div class="form-row"><label>Vendor</label><input type="text" id="cf-vendor" placeholder="Proveedor"></div>
+    <div class="form-row"><label>Amount</label><input type="number" id="cf-amount" placeholder="Monto total"></div>
+    <div class="form-row"><label>Quote ID</label><input type="text" id="cf-quoteid" placeholder="ID del proveedor"></div>
+    <div class="form-row"><label>URL</label><input type="url" id="cf-url" placeholder="https://..."></div>
+    <div class="form-row">
+      <label>Status</label>
+      <div class="status-picker" id="cotiz-status-picker">
+        <div class="status-opt selected" data-val="🟡" onclick="pickStatus(this)">🟡</div>
+        <div class="status-opt" data-val="🟢" onclick="pickStatus(this)">🟢</div>
+        <div class="status-opt" data-val="🔴" onclick="pickStatus(this)">🔴</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Areas</label>
+      <div class="resp-picker" id="cotiz-areas-picker"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeCotizForm()">Cancelar</button>
+      <button class="btn-save" id="cotiz-save-btn" onclick="saveCotiz()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const TOKEN   = 'pat8SF9w9X7yJCGyp.1ebcc53985c2bd9f8181d748623c3a4768f638da2d826840c6ed813e7e4bce4f';
+  const BASE    = 'appMQxYmohtXSCvUn';
+  const TABLE   = 'Table 1';
+  const API_URL = `https://api.airtable.com/v0/${BASE}/${encodeURIComponent(TABLE)}`;
+  const HEADERS = { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' };
+  const STATUS_ORDER = { '🔴': 0, '🟡': 1, '🟢': 2, '🔵': 3, '〇': 4 };
+  const DEFAULT_STATUSES = new Set(['🔴', '🟡', '🟢']);
+
+  let allRecords   = [];
+  let activeStatus = new Set(['🔴', '🟡', '🟢']);
+  let activeArea   = new Set(['All']);
+  let activeSort   = 'id';
+  let searchQuery  = '';
+  let viewingId    = null;
+  let editingId    = null;
+
+  function toPct(raw) {
+    if (raw === null || raw === undefined || raw === '') return 0;
+    const n = Number(raw);
+    if (isNaN(n)) return 0;
+    return Math.round(n <= 1 ? n * 100 : n);
+  }
+
+  function circColor(pct) {
+    /* Smooth gradient: 0% = red, 50% = amber, 100% = green */
+    const r0 = [220, 38,  38],  /* #dc2626 red   */
+          r1 = [217,119,  6],   /* #d97706 amber  */
+          r2 = [ 22,163, 74];   /* #16a34a green  */
+    let r, g, b;
+    if (pct <= 50) {
+      const t = pct / 50;
+      r = Math.round(r0[0] + (r1[0]-r0[0]) * t);
+      g = Math.round(r0[1] + (r1[1]-r0[1]) * t);
+      b = Math.round(r0[2] + (r1[2]-r0[2]) * t);
+    } else {
+      const t = (pct - 50) / 50;
+      r = Math.round(r1[0] + (r2[0]-r1[0]) * t);
+      g = Math.round(r1[1] + (r2[1]-r1[1]) * t);
+      b = Math.round(r1[2] + (r2[2]-r1[2]) * t);
+    }
+    return `rgb(${r},${g},${b})`;
+  }
+
+  function makeCircSVG(pct, status, size) {
+    const r   = size * 0.42, cx = size / 2;
+    const c   = 2 * Math.PI * r;
+    const off = c - (pct / 100) * c;
+    const col = circColor(pct);
+    const sw  = size <= 32 ? 3 : 5;
+    const fs  = size <= 32 ? 7 : 13;
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)">
+      <circle fill="none" stroke="#f0efe9" stroke-width="${sw}" cx="${cx}" cy="${cx}" r="${r}"/>
+      <circle fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round"
+        cx="${cx}" cy="${cx}" r="${r}"
+        stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}"/>
+      <text font-size="${fs}" font-family="DM Mono,monospace" fill="#9e9e99"
+        text-anchor="middle" dominant-baseline="middle"
+        x="${cx}" y="${cx}" transform="rotate(90,${cx},${cx})">${pct}%</text>
+    </svg>`;
+  }
+
+  function getFiltered() {
+    let recs = [...allRecords];
+    if (activeStatus.size < 5)
+      recs = recs.filter(r => activeStatus.has(r.fields.Status || '🟢'));
+    if (!activeArea.has('All'))
+      recs = recs.filter(r => activeArea.has(r.fields.Area || ''));
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      recs = recs.filter(r => {
+        const f = r.fields;
+        return (f.Task        || '').toLowerCase().includes(q)
+            || (f.Project     || '').toLowerCase().includes(q)
+            || (f.Area        || '').toLowerCase().includes(q)
+            || (f.Alert       || '').toLowerCase().includes(q);
+      });
+    }
+    /* Build area order based on the minimum ID in each area */
+    const areaMinId = {};
+    recs.forEach(r => {
+      const area = (r.fields.Area || '').trim();
+      const id   = Number(r.fields['ID']) || 0;
+      if (areaMinId[area] === undefined || id < areaMinId[area]) areaMinId[area] = id;
+    });
+
+    if (activeSort === 'id')
+      recs.sort((a,b) => {
+        const areaA = (a.fields.Area || '').trim();
+        const areaB = (b.fields.Area || '').trim();
+        if (areaA !== areaB) return areaMinId[areaA] - areaMinId[areaB];
+        return (Number(a.fields['ID'])||0) - (Number(b.fields['ID'])||0);
+      });
+    else if (activeSort === 'status')
+      recs.sort((a,b) => {
+        const areaA = (a.fields.Area || '').trim();
+        const areaB = (b.fields.Area || '').trim();
+        if (areaA !== areaB) return areaMinId[areaA] - areaMinId[areaB];
+        return (STATUS_ORDER[a.fields.Status||'🟢']||0) - (STATUS_ORDER[b.fields.Status||'🟢']||0);
+      });
+    else if (activeSort === 'progress')
+      recs.sort((a,b) => {
+        const areaA = (a.fields.Area || '').trim();
+        const areaB = (b.fields.Area || '').trim();
+        if (areaA !== areaB) return areaMinId[areaA] - areaMinId[areaB];
+        return toPct(b.fields.Progress) - toPct(a.fields.Progress);
+      });
+    return recs;
+  }
+
+  /* Update dynamic title + status summary counts */
+  function updateHeader(filtered) {
+    /* Title */
+    const titleEl = document.getElementById('title-area');
+    titleEl.textContent = activeArea.has('All') ? 'Todas las Actividades'
+      : activeArea.size === 1 ? [...activeArea][0]
+      : [...activeArea].join(', ');
+
+    /* Count by status within the current area filter (ignoring status chip) */
+    const base = activeArea.has('All')
+      ? allRecords
+      : allRecords.filter(r => activeArea.has(r.fields.Area || ''));
+
+    const green  = base.filter(r => (r.fields.Status || '🟢') === '🟢').length;
+    const yellow = base.filter(r => (r.fields.Status || '🟢') === '🟡').length;
+    const red    = base.filter(r => (r.fields.Status || '🟢') === '🔴').length;
+    const blue   = base.filter(r => r.fields.Status === '🔵').length;
+    const depr   = base.filter(r => r.fields.Status === '〇').length;
+    const total  = base.length;
+
+    document.getElementById('status-summary').innerHTML = `
+      <div class="status-pill"><span class="status-pill-icon">🔴</span><span class="status-pill-count">${red}</span></div>
+      <div class="status-summary-sep"></div>
+      <div class="status-pill"><span class="status-pill-icon">🟡</span><span class="status-pill-count">${yellow}</span></div>
+      <div class="status-summary-sep"></div>
+      <div class="status-pill"><span class="status-pill-icon">🟢</span><span class="status-pill-count">${green}</span></div>
+      <div class="status-summary-sep"></div>
+      <div class="status-pill"><span class="status-pill-icon">🔵</span><span class="status-pill-count">${blue}</span></div>
+      <div class="status-summary-sep"></div>
+      <div class="status-pill"><span class="status-pill-icon">〇</span><span class="status-pill-count">${depr}</span></div>
+      <div class="status-summary-sep"></div>
+      <div class="status-total">${total} total</div>
+    `;
+  }
+
+  function buildAreaChips() {
+    /* Sort areas by the minimum ID of their records — same order as list view */
+    const areaMinId = {};
+    allRecords.forEach(r => {
+      const area = (r.fields.Area || '').trim();
+      const id   = Number(r.fields['ID']) || 0;
+      if (!area) return;
+      if (areaMinId[area] === undefined || id < areaMinId[area]) areaMinId[area] = id;
+    });
+    const areas = Object.keys(areaMinId).sort((a, b) => areaMinId[a] - areaMinId[b]);
+    const toolbar = document.getElementById('area-toolbar');
+    toolbar.innerHTML = `<span class="toolbar-label">Area</span>
+      <div class="chip ${activeArea.has('All') ? 'active' : ''}" data-filter-area="All" onclick="setAreaFilter(this)">All</div>
+      ${areas.map(a => `<div class="chip ${activeArea.has(a) ? 'active' : ''}" data-filter-area="${esc(a)}" onclick="setAreaFilter(this)">${esc(a)}</div>`).join('')}`;
+  }
+
+  function renderList() {
+    const filtered = getFiltered();
+    updateHeader(filtered);
+
+    const list = document.getElementById('list');
+    if (!filtered.length) {
+      list.innerHTML = '<div class="state-box"><div class="state-icon">🔍</div>Sin resultados</div>';
+      return;
+    }
+
+    let html = '';
+    let lastArea = undefined;
+
+    filtered.forEach(r => {
+      const f      = r.fields;
+      const area   = (f.Area || '').trim();
+      const status = f.Status || '🟢';
+      const pct    = toPct(f.Progress);
+      const name   = esc(f.Task || f.Name || '(sin título)');
+      const lineId = f['ID'] ? `<div class="row-id">${f['ID']}</div>` : '';
+
+      if ((activeArea.has('All') || activeArea.size > 1) && area !== lastArea) {
+        const areaCount = filtered.filter(x => (x.fields.Area || '').trim() === area).length;
+        const label = area || 'Sin área';
+        html += `<div class="area-sep">
+          <div class="area-sep-label">${esc(label)}</div>
+          <div class="area-sep-line"></div>
+          <div class="area-sep-count">${areaCount}</div>
+        </div>`;
+        lastArea = area;
+      }
+
+      html += `<div class="row" onclick="openDetail('${r.id}')">
+        ${lineId}
+        <div class="row-status">${status}</div>
+        <div class="row-name">${name}</div>
+        <div class="circ-wrap">${makeCircSVG(pct, status, 32)}</div>
+      </div>`;
+    });
+
+    list.innerHTML = html;
+  }
+
+  function toggleStatusFilter(el) {
+    const val = el.dataset.filterStatus;
+    if (activeStatus.has(val)) {
+      if (activeStatus.size === 1) return; /* keep at least one active */
+      activeStatus.delete(val);
+      el.classList.remove('active');
+    } else {
+      activeStatus.add(val);
+      el.classList.add('active');
+    }
+    renderList();
+  }
+
+  function setAreaFilter(el) {
+    const val = el.dataset.filterArea;
+    if (val === 'All') {
+      activeArea = new Set(['All']);
+    } else {
+      activeArea.delete('All');
+      if (activeArea.has(val)) {
+        activeArea.delete(val);
+        if (activeArea.size === 0) activeArea = new Set(['All']);
+      } else {
+        activeArea.add(val);
+      }
+    }
+    buildAreaChips();
+    renderList();
+  }
+
+  function pickStatus(el) {
+    el.closest('.status-picker').querySelectorAll('.status-opt').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function toggleResp(el) {
+    el.classList.toggle('selected');
+  }
+
+  function toggleGantt() {
+    document.getElementById('gantt-toggle').classList.toggle('on');
+  }
+
+  function setSort(el) {
+    document.querySelectorAll('[data-sort]').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    activeSort = el.dataset.sort;
+    renderList();
+  }
+
+  function onSearch() {
+    searchQuery = document.getElementById('search-input').value.trim();
+    document.getElementById('search-clear').style.display = searchQuery ? 'block' : 'none';
+    renderList();
+  }
+
+  function clearSearch() {
+    document.getElementById('search-input').value = '';
+    searchQuery = '';
+    document.getElementById('search-clear').style.display = 'none';
+    renderList();
+  }
+
+  function openDetail(id) {
+    viewingId = id;
+    const rec = allRecords.find(r => r.id === id);
+    if (!rec) return;
+    const f      = rec.fields;
+    const status = f.Status || '🟢';
+    const pct    = toPct(f.Progress);
+    document.getElementById('d-icon').textContent  = status;
+    document.getElementById('d-title').textContent = f.Task || f.Name || '(sin título)';
+    document.getElementById('d-circ').innerHTML    = makeCircSVG(pct, status, 80);
+    document.getElementById('d-fields').innerHTML  = [
+      { label: 'Línea #',       val: f['ID']          || '—' },
+      { label: 'Progreso',      val: pct + '%'               },
+      { label: 'Proyecto',      val: f.Project        || '—' },
+      { label: 'Área',          val: f.Area           || '—' },
+
+    ].map(fd => `<div class="detail-field${fd.full ? ' detail-field-full' : ''}">
+      <div class="detail-field-label">${fd.label}</div>
+      <div class="detail-field-value">${esc(String(fd.val))}</div>
+    </div>`).join('');
+    const alertVal  = (f.Alert  || '').trim();
+    const respVal   = Array.isArray(f.Responsible) ? f.Responsible : (f.Responsible ? [f.Responsible] : []);
+    document.getElementById('d-alert').innerHTML      = alertVal  ? esc(alertVal).replace(/\n/g,'<br>') : '<span class="detail-block-empty">Sin notas</span>';
+    document.getElementById('d-responsible').innerHTML = respVal.length
+      ? respVal.map(r => `<span style="display:inline-block;font-size:12px;font-weight:500;padding:4px 10px;border-radius:20px;background:var(--accent);color:#fff;margin:2px 4px 2px 0;">${esc(r)}</span>`).join('')
+      : '<span class="detail-block-empty">Sin responsable asignado</span>';
+
+    /* Load linked actions */
+    document.getElementById('d-actions-list').innerHTML = '<div style="font-size:12px;color:#93c5fd;text-align:center;padding:6px;">Cargando...</div>';
+    loadActions(rec.id);
+
+    const ganttPending = f.Gantt === true;
+    const ganttBlock = document.getElementById('d-gantt-block');
+    ganttBlock.classList.remove('block-gantt-pending', 'block-gantt-ok');
+    ganttBlock.classList.add(ganttPending ? 'block-gantt-pending' : 'block-gantt-ok');
+    document.getElementById('d-gantt').innerHTML = ganttPending
+      ? '⚠️ <strong>Pendiente de carga al Gantt</strong>'
+      : '<span style="color:var(--text3)">Al día — no requiere acción</span>';
+    document.getElementById('detail-overlay').classList.add('open');
+  }
+
+  function closeDetail() { document.getElementById('detail-overlay').classList.remove('open'); }
+
+  /* ── Actions ── */
+  const ACTIONS_URL    = `https://api.airtable.com/v0/${BASE}/${encodeURIComponent('Actions')}`;
+  const MODULES_URL    = `https://api.airtable.com/v0/${BASE}/${encodeURIComponent('Modules')}`;
+  const ASSETS_URL     = `https://api.airtable.com/v0/${BASE}/${encodeURIComponent('Assets')}`;
+  const COTIZ_URL      = `https://api.airtable.com/v0/${BASE}/${encodeURIComponent('Cotizaciones')}`;
+  const BP_URL         = `https://api.airtable.com/v0/${BASE}/${encodeURIComponent('Blueprints')}`;
+
+  let currentActionId   = null;
+  let currentActionRecId = null; /* Airtable record id of current action */
+  let allModules        = [];
+
+  async function loadActions(taskRecId) {
+    const list = document.getElementById('d-actions-list');
+    if (!list) return;
+    if (!taskRecId) { list.innerHTML = '<div class="actions-empty">Sin ID de tarea</div>'; return; }
+    try {
+      /* Fetch all actions and filter client-side — avoids linked record formula issues */
+      let records = [], offset = null;
+      do {
+        const url  = ACTIONS_URL + '?pageSize=100' + (offset ? '&offset=' + offset : '');
+        const res  = await fetch(url, { headers: HEADERS });
+        const data = await res.json();
+        if (data.error) { list.innerHTML = `<div class="actions-empty">Error: ${esc(data.error.message)}</div>`; return; }
+        records = records.concat(data.records || []);
+        offset  = data.offset || null;
+      } while (offset);
+
+      /* Filter: Task field is array of record IDs */
+      const recs = records.filter(r => {
+        const task = r.fields.Task;
+        if (!task) return false;
+        if (Array.isArray(task)) return task.includes(taskRecId);
+        return task === taskRecId;
+      });
+
+      if (!recs.length) { list.innerHTML = '<div class="actions-empty">Sin acciones todavía</div>'; return; }
+      list.innerHTML = recs.map(r => {
+        const f      = r.fields;
+        const status = f.Status || '🟢';
+        const name   = esc(f.Name || '(sin título)');
+        return `<div class="action-row" onclick="openActionDetail('${r.id}')">
+          <div class="action-row-status">${status}</div>
+          <div class="action-row-name">${name}</div>
+          <div class="action-row-arrow">›</div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      list.innerHTML = `<div class="actions-empty">Error: ${esc(e.message)}</div>`;
+    }
+  }
+
+  async function openActionDetail(actionId) {
+    currentActionRecId = actionId;
+    document.getElementById('ad-title').textContent  = '';
+    document.getElementById('ad-status').textContent = '';
+    document.getElementById('ad-desc').textContent   = '';
+    document.getElementById('ad-modules').innerHTML  = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px;">Cargando...</div>';
+    document.getElementById('action-detail-overlay').classList.add('open');
+    try {
+      const res  = await fetch(`${ACTIONS_URL}/${actionId}`, { headers: HEADERS });
+      const data = await res.json();
+      if (data.error) { document.getElementById('ad-title').textContent = 'Error: ' + data.error.message; return; }
+      const f = data.fields;
+      document.getElementById('ad-status').textContent = f.Status || '🟢';
+      document.getElementById('ad-title').textContent  = f.Name   || '(sin título)';
+      document.getElementById('ad-desc').textContent   = f.Description || '';
+      await loadModules(actionId);
+    } catch(e) {
+      document.getElementById('ad-title').textContent = 'Error: ' + e.message;
+    }
+  }
+
+  async function loadModules(actionId) {
+    try {
+      let records = [], offset = null;
+      do {
+        const url  = MODULES_URL + '?pageSize=100' + (offset ? '&offset=' + offset : '');
+        const res  = await fetch(url, { headers: HEADERS });
+        const data = await res.json();
+        if (data.error) { document.getElementById('ad-modules').innerHTML = `<div style="font-size:12px;color:var(--text3);">Error: ${esc(data.error.message)}</div>`; return; }
+        records = records.concat(data.records || []);
+        offset  = data.offset || null;
+      } while (offset);
+
+      allModules = records.filter(r => {
+        const action = r.fields.Action;
+        if (!action) return false;
+        if (Array.isArray(action)) return action.includes(actionId);
+        return action === actionId;
+      });
+      renderModules();
+    } catch(e) {
+      document.getElementById('ad-modules').innerHTML = `<div style="font-size:12px;color:var(--text3);">Error: ${esc(e.message)}</div>`;
+    }
+  }
+
+  function renderModules() {
+    const el = document.getElementById('ad-modules');
+    if (!allModules.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text3);font-style:italic;margin-bottom:8px;">Sin módulos todavía</div>';
+      return;
+    }
+    el.innerHTML = allModules.map(m => renderModuleInline(m)).join('');
+  }
+
+  function renderModuleInline(m) {
+    const f    = m.fields;
+    const type = f.Type || 'Notes';
+    const ICONS = { 'Decision Visual': '🖼️', Quote: '💰', Notes: '📝' };
+
+    let inner = '';
+
+    if (type === 'Decision Visual') {
+      /* Get assets for this module from already-loaded cache or show load button */
+      const assets  = (window._moduleAssets && window._moduleAssets[m.id]) || [];
+      const images  = assets.filter(a => a.fields.Type === 'Image');
+      const others  = assets.filter(a => a.fields.Type !== 'Image');
+      let saved = {};
+      try { saved = JSON.parse(f.Data || '{}'); } catch(e) {}
+      const sel = saved.selected  || null;
+      const com = saved.committed || null;
+
+      if (!assets.length) {
+        loadAndRenderModule(m.id);
+        inner += `<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px;">Cargando imágenes...</div>`;
+      } else {
+        inner += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;margin-bottom:10px;">`;
+        images.forEach(asset => {
+          const af     = asset.fields;
+          const attach = af.File || [];
+          const imgUrl = attach.length ? attach[0].url : (af.URL || null);
+          const isSel  = sel === asset.id;
+          const isCom  = com === asset.id;
+          const isOth  = com && com !== asset.id;
+          const border = isCom ? '#16a34a' : (isSel ? '#2563eb' : 'transparent');
+          const opacity = isOth ? 'opacity:0.35;' : '';
+          inner += `<div style="border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid ${border};${opacity}transition:all 0.15s;" onclick="inlineSelectAsset('${m.id}','${asset.id}')">`;
+          if (imgUrl) {
+            inner += `<img src="${imgUrl}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;" loading="lazy">`;
+          } else {
+            inner += `<div style="width:100%;aspect-ratio:1;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3);">Sin img</div>`;
+          }
+          inner += `<div style="padding:4px 6px;background:var(--surface);font-size:10px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">`;
+          if (isCom) inner += `<span style="color:#16a34a;">✓ </span>`;
+          inner += `${esc(af.Name||'')}`;
+          inner += `</div></div>`;
+        });
+        inner += `</div>`;
+
+        if (others.length) {
+          others.forEach(asset => {
+            const af  = asset.fields;
+            const url = af.URL || (af.File && af.File[0] ? af.File[0].url : null);
+            inner += `<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:var(--surface2);border-radius:6px;margin-bottom:4px;font-size:12px;">
+              <span>${af.Type === 'PDF' ? '📄' : '🔗'}</span>
+              <span style="flex:1;font-weight:500;">${esc(af.Name||'')}</span>
+              ${url ? `<a href="${url}" style="color:#2563eb;" target="_blank">Abrir</a>` : ''}
+            </div>`;
+          });
+        }
+
+        const canCommit = sel && sel !== com;
+        inner += `<button onclick="inlineCommit('${m.id}')"
+          style="width:100%;height:36px;margin-top:4px;border:none;border-radius:6px;
+          font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;
+          background:${canCommit ? '#16a34a' : 'var(--surface2)'};color:${canCommit ? '#fff' : 'var(--text3)'};">
+          ${com ? '✓ Decisión tomada — cambiar' : 'Commit — confirmar selección'}
+        </button>`;
+      }
+
+      /* Upload button */
+      inner += `<div style="display:flex;gap:6px;margin-top:8px;">
+        <button onclick="inlineTriggerUpload('${m.id}')" style="flex:1;height:34px;border:1px dashed var(--border);background:transparent;border-radius:6px;font-size:12px;color:var(--text3);cursor:pointer;font-family:'DM Sans',sans-serif;">+ Imagen</button>
+      </div>`;
+
+    } else if (type === 'Notes') {
+      let saved = {};
+      try { saved = JSON.parse(f.Data || '{}'); } catch(e) {}
+      inner += `<textarea id="notes-${m.id}" style="width:100%;min-height:100px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 10px;outline:none;resize:vertical;line-height:1.5;">${esc(saved.content||'')}</textarea>
+        <button onclick="inlineSaveNotes('${m.id}')" style="width:100%;height:34px;margin-top:6px;border:none;background:var(--accent);color:#fff;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;">Guardar</button>`;
+
+    } else if (type === 'Quote') {
+      let saved = {};
+      try { saved = JSON.parse(f.Data || '{}'); } catch(e) {}
+      const vendors = saved.vendors || [];
+      if (!vendors.length) {
+        inner += `<div style="font-size:12px;color:var(--text3);font-style:italic;margin-bottom:8px;">Sin proveedores</div>`;
+      }
+      vendors.forEach(v => {
+        inner += `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--surface2);border-radius:6px;margin-bottom:5px;">
+          <div>
+            <div style="font-size:13px;font-weight:500;">${esc(v.name||'Proveedor')}</div>
+            ${v.notes ? `<div style="font-size:11px;color:var(--text3);">${esc(v.notes)}</div>` : ''}
+          </div>
+          <div style="font-size:13px;font-weight:600;font-family:'DM Mono',monospace;">${v.amount ? '$'+esc(v.amount) : '—'}</div>
+        </div>`;
+      });
+      inner += `<button onclick="inlineAddVendor('${m.id}')" style="width:100%;height:34px;border:1px dashed var(--border);background:transparent;border-radius:6px;font-size:12px;color:var(--text3);cursor:pointer;font-family:'DM Sans',sans-serif;">+ Agregar proveedor</button>`;
+    }
+
+    return `<div class="module-card" style="cursor:default;">
+      <div class="module-card-header" style="margin-bottom:10px;">
+        <div class="module-card-type">${ICONS[type]||'📦'} ${esc(type)}</div>
+        <div style="font-size:13px;font-weight:500;color:var(--text);flex:1;text-align:right;">${esc(f.Title||'')}</div>
+      </div>
+      ${inner}
+    </div>`;
+  }
+
+  /* Inline module actions */
+  async function loadAndRenderModule(moduleId) {
+    if (!window._moduleAssets) window._moduleAssets = {};
+    let records = [], offset = null;
+    do {
+      const url  = ASSETS_URL + '?pageSize=100' + (offset ? '&offset=' + offset : '');
+      const res  = await fetch(url, { headers: HEADERS });
+      const data = await res.json();
+      records = records.concat(data.records || []);
+      offset  = data.offset || null;
+    } while (offset);
+    window._moduleAssets[moduleId] = records.filter(r => {
+      const mod = r.fields.Module;
+      return Array.isArray(mod) ? mod.includes(moduleId) : mod === moduleId;
+    });
+    renderModules();
+  }
+
+  async function inlineSelectAsset(moduleId, assetId) {
+    const m = allModules.find(x => x.id === moduleId);
+    if (!m) return;
+    let saved = {};
+    try { saved = JSON.parse(m.fields.Data || '{}'); } catch(e) {}
+    saved.selected = saved.selected === assetId ? null : assetId;
+    m.fields.Data = JSON.stringify(saved);
+    renderModules();
+  }
+
+  async function inlineCommit(moduleId) {
+    const m = allModules.find(x => x.id === moduleId);
+    if (!m) return;
+    let saved = {};
+    try { saved = JSON.parse(m.fields.Data || '{}'); } catch(e) {}
+    if (!saved.selected) return;
+    saved.committed = saved.selected;
+    m.fields.Data = JSON.stringify(saved);
+    try {
+      await fetch(MODULES_URL + '/' + moduleId, {
+        method: 'PATCH', headers: HEADERS,
+        body: JSON.stringify({ fields: { Data: JSON.stringify(saved) } })
+      });
+    } catch(e) { alert('Error: ' + e.message); }
+    renderModules();
+  }
+
+  async function inlineSaveNotes(moduleId) {
+    const content = document.getElementById('notes-' + moduleId)?.value || '';
+    const data    = JSON.stringify({ content });
+    const m = allModules.find(x => x.id === moduleId);
+    if (m) m.fields.Data = data;
+    try {
+      await fetch(MODULES_URL + '/' + moduleId, {
+        method: 'PATCH', headers: HEADERS,
+        body: JSON.stringify({ fields: { Data: data } })
+      });
+      alert('Notas guardadas ✓');
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  async function inlineAddVendor(moduleId) {
+    const name   = prompt('Nombre del proveedor:'); if (!name) return;
+    const amount = prompt('Monto:') || '';
+    const notes  = prompt('Notas:') || '';
+    const m = allModules.find(x => x.id === moduleId);
+    if (!m) return;
+    let saved = {};
+    try { saved = JSON.parse(m.fields.Data || '{}'); } catch(e) {}
+    if (!saved.vendors) saved.vendors = [];
+    saved.vendors.push({ name, amount, notes });
+    m.fields.Data = JSON.stringify(saved);
+    try {
+      await fetch(MODULES_URL + '/' + moduleId, {
+        method: 'PATCH', headers: HEADERS,
+        body: JSON.stringify({ fields: { Data: JSON.stringify(saved) } })
+      });
+    } catch(e) { alert('Error: ' + e.message); }
+    renderModules();
+  }
+
+  function inlineTriggerUpload(moduleId) {
+    currentModuleId = moduleId;
+    currentActionRecId = currentActionRecId; /* already set */
+    document.getElementById('asset-file-input').value = '';
+    document.getElementById('asset-file-input').onchange = async function(event) {
+      var file = event.target.files[0];
+      if (!file) return;
+      var name = prompt('Nombre para esta imagen:', file.name.replace(/\.[^.]+$/, ''));
+      if (!name) return;
+      try {
+        var base64 = await new Promise(function(resolve, reject) {
+          var reader = new FileReader();
+          reader.onload  = function() { resolve(reader.result.split(',')[1]); };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        var imgbbKey = '2e46b9f4e6d5a7c8b0f1d3e5a9c2b4d6';
+        var formData = new FormData();
+        formData.append('key', imgbbKey);
+        formData.append('image', base64);
+        formData.append('name', name);
+        var imgRes  = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: formData });
+        var imgData = await imgRes.json();
+        var imgUrl  = imgData.data?.url || imgData.data?.display_url;
+        if (!imgUrl) throw new Error('No URL from ImgBB');
+        var createRes  = await fetch(ASSETS_URL, {
+          method: 'POST', headers: HEADERS,
+          body: JSON.stringify({ fields: { Name: name, Type: 'Image', URL: imgUrl, Module: [moduleId] } })
+        });
+        var createData = await createRes.json();
+        if (createData.error) throw new Error(createData.error.message);
+        if (!window._moduleAssets) window._moduleAssets = {};
+        if (!window._moduleAssets[moduleId]) window._moduleAssets[moduleId] = [];
+        window._moduleAssets[moduleId].push(createData);
+        renderModules();
+      } catch(e) { alert('Error subiendo: ' + e.message); }
+    };
+    document.getElementById('asset-file-input').click();
+  }
+
+
+
+  function closeActionDetail() {
+    document.getElementById('action-detail-overlay').classList.remove('open');
+    if (formActionsMode) {
+      refreshFormActions();
+    } else if (viewingId) {
+      loadActions(viewingId);
+    }
+  }
+
+  /* ── Action form ── */
+  let editingActionId = null;
+
+  function openNewAction() {
+    if (!viewingId) { alert('Error: no hay tarea seleccionada'); return; }
+    editingActionId = null;
+    document.getElementById('action-form-title').textContent = 'Nueva acción';
+    document.getElementById('af-name').value = '';
+    document.getElementById('af-desc').value = '';
+    const picker = document.querySelector('#action-form-overlay .status-picker');
+    if (picker) {
+      picker.querySelectorAll('.status-opt').forEach(o => o.classList.remove('selected'));
+      const def = picker.querySelector('.status-opt[data-val="🟢"]');
+      if (def) def.classList.add('selected');
+    }
+    document.getElementById('action-form-overlay').classList.add('open');
+  }
+
+  function openEditAction() {
+    closeActionDetail();
+    /* re-open form pre-filled */
+    fetch(`${ACTIONS_URL}/${currentActionRecId}`, { headers: HEADERS })
+      .then(r => r.json()).then(data => {
+        editingActionId = currentActionRecId;
+        const f = data.fields;
+        document.getElementById('action-form-title').textContent = 'Editar acción';
+        document.getElementById('af-name').value = f.Name        || '';
+        document.getElementById('af-desc').value = f.Description || '';
+        document.querySelectorAll('#action-form-overlay .status-opt').forEach(o => o.classList.remove('selected'));
+        const sel = document.querySelector(`#action-form-overlay .status-opt[data-val="${f.Status||'🟢'}"]`);
+        if (sel) sel.classList.add('selected');
+        document.getElementById('action-form-overlay').classList.add('open');
+      });
+  }
+
+  let formActionsMode = false;
+
+  function closeActionForm() {
+    document.getElementById('action-form-overlay').classList.remove('open');
+    formActionsMode = false;
+  }
+
+  async function saveAction() {
+    const btn = document.getElementById('action-save-btn');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    const selStatus = document.querySelector('#action-form-overlay .status-opt.selected');
+    const fields = {
+      Name:        document.getElementById('af-name').value.trim(),
+      Description: document.getElementById('af-desc').value.trim(),
+      Status:      selStatus ? selStatus.dataset.val : '🟢',
+      Task:        [viewingId] /* linked record array */
+    };
+    try {
+      const res = await fetch(editingActionId ? `${ACTIONS_URL}/${editingActionId}` : ACTIONS_URL, {
+        method:  editingActionId ? 'PATCH' : 'POST',
+        headers: HEADERS,
+        body:    JSON.stringify({ fields })
+      });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error.message); return; }
+      closeActionForm();
+      if (formActionsMode) {
+        refreshFormActions();
+      } else {
+        loadActions(viewingId);
+      }
+    } catch(e) { alert('Error: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+  }
+
+  /* ── Module system ── */
+
+  function openModulePicker() {
+    document.getElementById('module-picker-overlay').classList.add('open');
+  }
+
+  async function addModule(type) {
+    document.getElementById('module-picker-overlay').classList.remove('open');
+    const titles = {
+      'Decision Visual': 'Nueva decisión visual',
+      'Notes':           'Nuevas notas',
+      'Quote':           'Nueva cotización'
+    };
+    const fields = {
+      Title:  titles[type] || type,
+      Type:   type,
+      Data:   '{}',
+      Action: [currentActionRecId]
+    };
+    try {
+      const res  = await fetch(MODULES_URL, { method: 'POST', headers: HEADERS, body: JSON.stringify({ fields }) });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error.message); return; }
+      allModules.push(data);
+      renderModules();
+      openModuleView(data.id);
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  let currentModuleId  = null;
+  let currentModuleRec = null;
+  let moduleAssets     = [];
+  let selectedAssetId  = null;
+  let committedAssetId = null;
+
+  async function openModuleView(moduleId) {
+    currentModuleId = moduleId;
+    document.getElementById('module-view-content').innerHTML =
+      '<div style="text-align:center;padding:2rem;color:var(--text3);">Cargando módulo...</div>';
+    document.getElementById('module-view-overlay').classList.add('open');
+    try {
+      /* Fetch module record */
+      const res  = await fetch(`${MODULES_URL}/${moduleId}`, { headers: HEADERS });
+      const data = await res.json();
+      if (data.error) { document.getElementById('module-view-content').innerHTML = 'Error: ' + data.error.message; return; }
+      currentModuleRec = data;
+
+      /* Parse saved Data */
+      let saved = {};
+      try { saved = JSON.parse(data.fields.Data || '{}'); } catch(e) { saved = {}; }
+      selectedAssetId  = saved.selected  || null;
+      committedAssetId = saved.committed || null;
+
+      /* Fetch linked assets */
+      let allAssetRecs = [], offset = null;
+      do {
+        const url  = ASSETS_URL + '?pageSize=100' + (offset ? '&offset=' + offset : '');
+        const ar   = await fetch(url, { headers: HEADERS });
+        const ad   = await ar.json();
+        allAssetRecs = allAssetRecs.concat(ad.records || []);
+        offset = ad.offset || null;
+      } while (offset);
+
+      moduleAssets = allAssetRecs.filter(r => {
+        const mod = r.fields.Module;
+        if (!mod) return false;
+        return Array.isArray(mod) ? mod.includes(moduleId) : mod === moduleId;
+      });
+
+      renderModuleView();
+    } catch(e) {
+      document.getElementById('module-view-content').innerHTML = 'Error: ' + e.message;
+    }
+  }
+
+  function renderModuleView() {
+    const f    = currentModuleRec.fields;
+    const type = f.Type || 'Notes';
+    let html   = '';
+
+    if (type === 'Decision Visual') {
+      const images = moduleAssets.filter(a => a.fields.Type === 'Image');
+      const others = moduleAssets.filter(a => a.fields.Type !== 'Image');
+
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">'
+            + '<div style="flex:1;">'
+            + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);margin-bottom:2px;">Decision Visual</div>'
+            + '<div style="font-size:17px;font-weight:600;color:var(--text);cursor:pointer;" onclick="editModuleTitle()">'
+            + esc(f.Title||'Sin título') + ' <span style="font-size:12px;color:var(--text3);">✎</span></div>'
+            + '</div>'
+            + '<button onclick="triggerImageUpload()" style="height:36px;padding:0 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;font-family:\'DM Sans\',sans-serif;white-space:nowrap;">+ Imagen</button>'
+            + '</div>';
+
+      html += '<div id="upload-status" style="display:none;font-size:12px;color:#2563eb;text-align:center;margin-bottom:8px;">Subiendo imagen...</div>';
+
+      if (!images.length) {
+        html += '<div style="font-size:13px;color:var(--text3);font-style:italic;text-align:center;padding:2rem 0;border:1px dashed var(--border);border-radius:var(--radius-sm);margin-bottom:12px;">Sin imágenes — toca "+ Imagen" para agregar</div>';
+      } else {
+        html += '<div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Toca una imagen para seleccionarla, luego presiona Commit.</div>';
+        html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:14px;">';
+        images.forEach(function(asset) {
+          var af  = asset.fields;
+          var attachments = af.File || [];
+          var imgUrl = attachments.length ? attachments[0].url : (af.URL || null);
+          var isSelected  = selectedAssetId  === asset.id;
+          var isCommitted = committedAssetId === asset.id;
+          var isOther     = committedAssetId && committedAssetId !== asset.id;
+          var border = isCommitted ? '#16a34a' : (isSelected ? '#2563eb' : 'transparent');
+          var opacity = isOther ? 'opacity:0.35;' : '';
+          html += '<div style="border-radius:var(--radius-sm);overflow:hidden;cursor:pointer;border:2px solid ' + border + ';' + opacity + 'transition:all 0.15s;" onclick="selectAsset(\'' + asset.id + '\')">';
+          if (imgUrl) {
+            html += '<img src="' + imgUrl + '" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;" loading="lazy">';
+          } else {
+            html += '<div style="width:100%;aspect-ratio:1;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text3);">Sin imagen</div>';
+          }
+          html += '<div style="padding:6px 8px;background:var(--surface);font-size:11px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">';
+          if (isCommitted) html += '<span style="color:#16a34a;margin-right:4px;">✓</span>';
+          html += esc(af.Name||'Sin nombre') + '</div></div>';
+        });
+        html += '</div>';
+      }
+
+      if (others.length) {
+        html += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);margin-bottom:8px;">Referencias</div>';
+        others.forEach(function(asset) {
+          var af  = asset.fields;
+          var url = af.URL || (af.File && af.File[0] ? af.File[0].url : null);
+          html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm);margin-bottom:6px;">'
+                + '<span style="font-size:14px;">' + (af.Type === 'PDF' ? '📄' : '🔗') + '</span>'
+                + '<div style="flex:1;font-size:13px;font-weight:500;color:var(--text);">' + esc(af.Name||'Sin nombre') + '</div>'
+                + (url ? '<a href="' + url + '" style="font-size:11px;color:#2563eb;" target="_blank">Abrir</a>' : '')
+                + '</div>';
+        });
+      }
+
+      var canCommit = selectedAssetId && selectedAssetId !== committedAssetId;
+      html += '<button onclick="commitSelection()" style="width:100%;height:44px;margin-top:8px;border:none;border-radius:var(--radius-sm);font-family:\'DM Sans\',sans-serif;font-size:15px;font-weight:500;cursor:pointer;background:' + (canCommit ? '#16a34a' : 'var(--surface2)') + ';color:' + (canCommit ? '#fff' : 'var(--text3)') + ';">'
+           + (committedAssetId ? '✓ Decisión tomada — cambiar selección' : 'Commit — confirmar selección') + '</button>';
+
+    } else if (type === 'Notes') {
+      var saved = {};
+      try { saved = JSON.parse(currentModuleRec.fields.Data || '{}'); } catch(e) {}
+      html += '<div style="font-size:17px;font-weight:600;color:var(--text);margin-bottom:14px;">' + esc(f.Title||'Notas') + '</div>';
+      html += '<textarea id="module-notes" style="width:100%;min-height:180px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);font-family:\'DM Sans\',sans-serif;font-size:14px;padding:10px 12px;outline:none;resize:vertical;line-height:1.6;">' + esc(saved.content||'') + '</textarea>';
+      html += '<button onclick="saveNotesModule()" style="width:100%;height:44px;margin-top:10px;border:none;background:var(--accent);color:#fff;border-radius:var(--radius-sm);font-family:\'DM Sans\',sans-serif;font-size:15px;font-weight:500;cursor:pointer;">Guardar notas</button>';
+
+    } else if (type === 'Quote') {
+      var saved = {};
+      try { saved = JSON.parse(currentModuleRec.fields.Data || '{}'); } catch(e) {}
+      var vendors = saved.vendors || [];
+      html += '<div style="font-size:17px;font-weight:600;color:var(--text);margin-bottom:14px;">' + esc(f.Title||'Cotización') + '</div>';
+      if (!vendors.length) {
+        html += '<div style="font-size:13px;color:var(--text3);font-style:italic;text-align:center;padding:1.5rem 0;margin-bottom:10px;">Sin proveedores todavía</div>';
+      }
+      vendors.forEach(function(v, i) {
+        html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;">'
+              + '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+              + '<div style="font-size:14px;font-weight:500;">' + esc(v.name||'Proveedor') + '</div>'
+              + '<div style="font-size:14px;font-weight:600;font-family:\'DM Mono\',monospace;">' + (v.amount ? '$' + esc(v.amount) : '—') + '</div>'
+              + '</div>'
+              + (v.notes ? '<div style="font-size:12px;color:var(--text2);">' + esc(v.notes) + '</div>' : '')
+              + '</div>';
+      });
+      html += '<button onclick="addVendorPrompt()" style="width:100%;height:40px;border:1px dashed var(--border);background:transparent;border-radius:var(--radius-sm);font-size:13px;color:var(--text3);cursor:pointer;font-family:\'DM Sans\',sans-serif;">+ Agregar proveedor</button>';
+    }
+
+    document.getElementById('module-view-content').innerHTML = html;
+  }
+
+  function selectAsset(assetId) {
+    selectedAssetId = selectedAssetId === assetId ? null : assetId;
+    renderModuleView();
+  }
+
+  async function commitSelection() {
+    if (!selectedAssetId) return;
+    committedAssetId = selectedAssetId;
+    var data = { selected: selectedAssetId, committed: committedAssetId };
+    try {
+      await fetch(MODULES_URL + '/' + currentModuleId, {
+        method: 'PATCH', headers: HEADERS,
+        body: JSON.stringify({ fields: { Data: JSON.stringify(data) } })
+      });
+    } catch(e) { alert('Error guardando: ' + e.message); }
+    renderModuleView();
+  }
+
+  function triggerImageUpload() {
+    document.getElementById('asset-file-input').value = '';
+    document.getElementById('asset-file-input').click();
+  }
+
+  async function handleImageUpload(event) {
+    var file = event.target.files[0];
+    if (!file) return;
+    var name = prompt('Nombre para esta imagen:', file.name.replace(/\.[^.]+$/, ''));
+    if (!name) return;
+
+    var statusEl = document.getElementById('upload-status');
+    if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Subiendo imagen...'; }
+
+    try {
+      /* Convert to base64 */
+      var base64 = await new Promise(function(resolve, reject) {
+        var reader = new FileReader();
+        reader.onload  = function() { resolve(reader.result.split(',')[1]); };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      /* Upload to ImgBB (free image host, ~32MB limit) */
+      var imgbbKey  = '2e46b9f4e6d5a7c8b0f1d3e5a9c2b4d6'; /* demo key — user should replace */
+      var formData  = new FormData();
+      formData.append('key', imgbbKey);
+      formData.append('image', base64);
+      formData.append('name', name);
+
+      var imgRes  = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: formData });
+      var imgData = await imgRes.json();
+
+      var imgUrl = imgData.data?.url || imgData.data?.display_url;
+      if (!imgUrl) throw new Error(imgData.error?.message || 'Error subiendo a ImgBB');
+
+      if (statusEl) statusEl.textContent = 'Guardando en Airtable...';
+
+      /* Create Asset record */
+      var createRes  = await fetch(ASSETS_URL, {
+        method: 'POST', headers: HEADERS,
+        body: JSON.stringify({ fields: { Name: name, Type: 'Image', URL: imgUrl, Module: [currentModuleId] } })
+      });
+      var createData = await createRes.json();
+      if (createData.error) throw new Error(createData.error.message);
+
+      moduleAssets.push(createData);
+      if (statusEl) statusEl.style.display = 'none';
+      renderModuleView();
+
+    } catch(e) {
+      if (statusEl) statusEl.style.display = 'none';
+      alert('Error subiendo imagen: ' + e.message);
+    }
+  }
+
+  async function editModuleTitle() {
+    var current = currentModuleRec.fields.Title || '';
+    var newTitle = prompt('Nombre del módulo:', current);
+    if (!newTitle || newTitle === current) return;
+    try {
+      var res  = await fetch(MODULES_URL + '/' + currentModuleId, {
+        method: 'PATCH', headers: HEADERS,
+        body: JSON.stringify({ fields: { Title: newTitle } })
+      });
+      var data = await res.json();
+      if (data.error) { alert('Error: ' + data.error.message); return; }
+      currentModuleRec.fields.Title = newTitle;
+      renderModuleView();
+      /* Also refresh module list in action detail */
+      var titleEl = document.getElementById('module-title-display');
+      if (titleEl) titleEl.textContent = newTitle + ' ✎';
+      loadModules(currentActionRecId);
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+
+
+  async function saveNotesModule() {
+    const content = document.getElementById('module-notes')?.value || '';
+    try {
+      await fetch(`${MODULES_URL}/${currentModuleId}`, {
+        method: 'PATCH', headers: HEADERS,
+        body: JSON.stringify({ fields: { Data: JSON.stringify({ content }) } })
+      });
+      alert('Notas guardadas ✓');
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  async function addVendorPrompt() {
+    const name   = prompt('Nombre del proveedor:'); if (!name) return;
+    const amount = prompt('Monto (sin símbolo):') || '';
+    const notes  = prompt('Notas:') || '';
+    let saved = {};
+    try { saved = JSON.parse(currentModuleRec.fields.Data || '{}'); } catch(e) {}
+    const vendors = saved.vendors || [];
+    vendors.push({ name, amount, notes });
+    const newData = JSON.stringify({ vendors });
+    try {
+      const res  = await fetch(`${MODULES_URL}/${currentModuleId}`, {
+        method: 'PATCH', headers: HEADERS,
+        body: JSON.stringify({ fields: { Data: newData } })
+      });
+      const data = await res.json();
+      currentModuleRec.fields.Data = newData;
+      renderModuleView();
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  function closeModuleView() {
+    document.getElementById('module-view-overlay').classList.remove('open');
+    loadModules(currentActionRecId);
+  }
+
+
+  function renderMarkdown(text) {
+    const lines = text.split('\n');
+    let out = '';
+    let inList = false;
+    let inTable = false;
+    let tableHeader = false;
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i];
+      if (line.startsWith('### ')) {
+        if (inList) { out += '</ul>'; inList = false; }
+        if (inTable) { out += '</tbody></table></div>'; inTable = false; }
+        out += '<h3 style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);margin:14px 0 4px;">' + inlinemd(line.slice(4)) + '</h3>';
+        continue;
+      }
+      if (line.startsWith('## ')) {
+        if (inList) { out += '</ul>'; inList = false; }
+        if (inTable) { out += '</tbody></table></div>'; inTable = false; }
+        out += '<h2 style="font-size:15px;font-weight:600;color:var(--text);margin:20px 0 6px;padding-top:8px;border-top:1px solid var(--border);">' + inlinemd(line.slice(3)) + '</h2>';
+        continue;
+      }
+      if (line.startsWith('# ')) {
+        if (inList) { out += '</ul>'; inList = false; }
+        if (inTable) { out += '</tbody></table></div>'; inTable = false; }
+        out += '<h1 style="font-size:17px;font-weight:600;color:var(--text);margin:20px 0 8px;">' + inlinemd(line.slice(2)) + '</h1>';
+        continue;
+      }
+      if (line.startsWith('|')) {
+        if (inList) { out += '</ul>'; inList = false; }
+        if (line.match(/^\|[\s\-|]+\|$/)) { tableHeader = false; continue; }
+        if (!inTable) { out += '<div style="overflow-x:auto;margin:8px 0;"><table style="width:100%;border-collapse:collapse;font-size:12px;">'; inTable = true; tableHeader = true; }
+        const cells = line.split('|').filter((c,i,a) => i > 0 && i < a.length - 1);
+        const tag = tableHeader ? 'th' : 'td';
+        const sty = tableHeader
+          ? 'padding:6px 8px;text-align:left;font-weight:600;background:var(--surface2);border:1px solid var(--border);'
+          : 'padding:5px 8px;border:1px solid var(--border);vertical-align:top;';
+        out += '<tr>' + cells.map(c => '<' + tag + ' style="' + sty + '">' + inlinemd(c.trim()) + '</' + tag + '>').join('') + '</tr>';
+        if (tableHeader) tableHeader = false;
+        continue;
+      } else if (inTable) {
+        out += '</tbody></table></div>'; inTable = false;
+      }
+      if (line.startsWith('- ') || line.startsWith('* ')) {
+        if (!inList) { out += '<ul style="margin:4px 0;padding:0;">'; inList = true; }
+        out += '<li style="margin:3px 0 3px 16px;line-height:1.5;">' + inlinemd(line.slice(2)) + '</li>';
+        continue;
+      } else if (inList) {
+        out += '</ul>'; inList = false;
+      }
+      if (line.trim() === '') { out += '<div style="height:6px;"></div>'; continue; }
+      out += '<p style="margin:4px 0;line-height:1.6;">' + inlinemd(line) + '</p>';
+    }
+    if (inList) out += '</ul>';
+    if (inTable) out += '</tbody></table></div>';
+    return out;
+  }
+
+  function inlinemd(text) {
+    return text
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`(.*?)`/g, '<code style="font-family:var(--font-mono);font-size:11px;background:var(--surface2);padding:1px 4px;border-radius:3px;">$1</code>');
+  }
+
+  function closeSummary() {
+    document.getElementById('summary-overlay').classList.remove('open');
+  }
+
+  async function openSummary() {
+    const records = allRecords;
+    const total   = records.length;
+    const green   = records.filter(r => r.fields.Status === '🟢').length;
+    const yellow  = records.filter(r => r.fields.Status === '🟡').length;
+    const red     = records.filter(r => r.fields.Status === '🔴').length;
+    const blue    = records.filter(r => r.fields.Status === '🔵').length;
+    const depr    = records.filter(r => r.fields.Status === '〇').length;
+    const avgPct  = total ? Math.round(records.reduce((s,r) => s + toPct(r.fields.Progress), 0) / total) : 0;
+
+    document.getElementById('summary-scope-label').textContent = 'Resumen del proyecto';
+    document.getElementById('summary-body').innerHTML = `
+      <div class="state-box" style="padding:2rem 1rem;">
+        <div style="font-size:28px;animation:spin 1s linear infinite;display:inline-block;">⟳</div>
+        <div style="margin-top:8px;font-size:13px;color:var(--text3);">Generando resumen con IA...</div>
+      </div>`;
+    document.getElementById('summary-overlay').classList.add('open');
+
+    const STATUS_LABEL = {
+      '🟢': 'Verde — en ejecución sin alertas',
+      '🟡': 'Amarillo — sin alertas, en espera de ejecución',
+      '🔴': 'Rojo — alerta activa, decisión pendiente para proceder',
+      '🔵': 'Azul — completado',
+      '〇': 'Deprecado — descartado'
+    };
+
+    /* Group by area for richer context */
+    const byArea = {};
+    records.forEach(r => {
+      const area = r.fields.Area || 'Sin área';
+      if (!byArea[area]) byArea[area] = [];
+      byArea[area].push(r);
+    });
+
+    const areaBlocks = Object.entries(byArea).map(([area, recs]) => {
+      const lines = recs.map(r => {
+        const f    = r.fields;
+        const pct  = toPct(f.Progress);
+        const resp = Array.isArray(f.Responsible) && f.Responsible.length
+          ? f.Responsible.join(', ')
+          : 'Sin asignar';
+        let line = `[${f['ID']||'?'}] ${f.Task||'(sin nombre)'} | ${STATUS_LABEL[f.Status]||f.Status||'—'} | ${pct}% | ${f.Area||'—'}`;
+        if (resp !== 'Sin asignar') line += ` | ${resp}`;
+        if (f.Alert)  line += ` | "${f.Alert}"`;
+        if (f.Gantt)  line += ` | ⚠GANTT`;
+        return line;
+      }).join('\n');
+      return `ÁREA: ${area}\n${lines}`;
+    }).join('\n\n');
+
+    /* Truncate if prompt would be too long */
+    const areaBlocksTrunc = areaBlocks.length > 5000 ? areaBlocks.slice(0, 5000) + '\n... (truncado)' : areaBlocks;
+
+    const prompt = `Eres un asistente de gestión de proyectos. Basándote ÚNICAMENTE en los datos del proyecto "Estación Central" que te presento abajo, escribe un informe ejecutivo en español. No inventes ni agregues información que no esté en los datos.
+
+LEYENDA DE ESTADOS:
+🟢 Verde = en ejecución activa, sin alertas
+🟡 Amarillo = sin alertas, en espera de iniciar ejecución
+🔴 Rojo = bloqueada, hay una decisión o acción pendiente para poder avanzar
+🔵 Azul = completada al 100%
+〇 = deprecada, descartada
+
+ESTADÍSTICAS: ${total} actividades en total | 🔴 ${red} bloqueadas | 🟡 ${yellow} en espera | 🟢 ${green} en ejecución | 🔵 ${blue} completadas | 〇 ${depr} deprecadas | Avance promedio: ${avgPct}%
+
+DATOS:
+${areaBlocksTrunc}
+
+---
+Escribe el informe con estas secciones. Cada sección es UN PÁRRAFO narrativo, fluido, en prosa. No uses tablas ni listas. Solo párrafos.
+
+## Resumen general
+Un párrafo de 4-5 oraciones describiendo el estado global del proyecto: cuántas actividades hay, en qué estado están, cuál es el avance promedio, y cuál es la situación más crítica.
+
+## Actividades bloqueadas 🔴
+Un párrafo describiendo todas las actividades rojas: qué las bloquea, en qué áreas están concentradas, y qué patrones comunes se observan en los bloqueos.
+
+## Actividades en espera 🟡
+Un párrafo describiendo las actividades amarillas: cuántas son, en qué áreas están, y qué representan para el avance del proyecto.
+
+## Actividades en ejecución 🟢
+Un párrafo sobre las actividades verdes: cuáles tienen mayor avance, cuáles están recién iniciadas, qué áreas están más activas.
+
+## Completadas y deprecadas
+Un párrafo breve sobre las actividades azules y deprecadas.
+
+## Recomendación
+Un párrafo con 2-3 acciones concretas y prioritarias para esta semana, basadas exclusivamente en los datos.`;
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
+      const res  = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': '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',
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 1024,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      clearTimeout(timeout);
+      const data = await res.json();
+      const text = data.content?.map(b => b.text || '').join('');
+      if (!text) {
+        const apiErr = data.error?.message || JSON.stringify(data);
+        document.getElementById('summary-body').innerHTML = `<div class="error-box">API error: ${esc(apiErr)}</div>`;
+        return;
+      }
+      const html = renderMarkdown(text);
+      document.getElementById('summary-body').innerHTML = `
+        <div class="summary-scope-chip">Todas las áreas · ${total} actividades · ${avgPct}% promedio · 🔴${red} 🟡${yellow} 🟢${green} 🔵${blue} 〇${depr}</div>
+        <div class="summary-text">${html}</div>`;
+    } catch(e) {
+      const msg = e.name === 'AbortError'
+        ? 'Tiempo de espera agotado (30s). Intenta de nuevo.'
+        : 'Error de red: ' + e.message;
+      document.getElementById('summary-body').innerHTML =
+        `<div class="error-box">${esc(msg)}</div>`;
+    }
+  }
+
+  function switchToEdit() {
+    const rec = allRecords.find(r => r.id === viewingId);
+    if (!rec) return;
+    closeDetail();
+    openEdit(viewingId);
+  }
+
+  let draftTaskId    = null;
+
+  function openNew() {
+    editingId   = null;
+    draftTaskId = null;
+    document.getElementById('f-task').value         = '';
+    document.getElementById('f-project').value      = '';
+    document.getElementById('f-area').value         = '';
+    document.getElementById('f-alert').value        = '';
+    document.getElementById('f-progress').value     = 0;
+    document.getElementById('prog-val').textContent = '0%';
+    document.getElementById('gantt-toggle').classList.remove('on');
+    document.querySelectorAll('#form-overlay .resp-opt').forEach(o => o.classList.remove('selected'));
+    document.querySelectorAll('#form-overlay .status-opt').forEach(o => o.classList.remove('selected'));
+    const def = document.querySelector('#form-overlay .status-opt[data-val="🟢"]');
+    if (def) def.classList.add('selected');
+    document.getElementById('form-title').textContent = 'Nueva actividad';
+    document.getElementById('form-actions-section').style.display = 'none';
+    document.getElementById('form-actions-list').innerHTML = '<div class="actions-empty">Sin acciones todavía</div>';
+    document.getElementById('form-overlay').classList.add('open');
+  }
+
+  function openEdit(id) {
+    editingId   = id;
+    draftTaskId = null;
+    viewingId   = id;
+    const rec   = allRecords.find(r => r.id === id);
+    if (!rec) return;
+    const f = rec.fields;
+    document.getElementById('form-title').textContent = 'Editar actividad';
+    document.getElementById('f-task').value    = f.Task    || f.Name || '';
+    document.getElementById('f-project').value = f.Project || '';
+    document.getElementById('f-area').value    = f.Area    || '';
+    document.getElementById('f-alert').value   = f.Alert   || '';
+    document.getElementById('f-progress').value     = toPct(f.Progress);
+    document.getElementById('prog-val').textContent = toPct(f.Progress) + '%';
+    const gt = document.getElementById('gantt-toggle');
+    f.Gantt ? gt.classList.add('on') : gt.classList.remove('on');
+    document.querySelectorAll('#form-overlay .resp-opt').forEach(o => o.classList.remove('selected'));
+    const selected = Array.isArray(f.Responsible) ? f.Responsible : (f.Responsible ? [f.Responsible] : []);
+    selected.forEach(val => {
+      const el = document.querySelector(`#form-overlay .resp-opt[data-val="${val}"]`);
+      if (el) el.classList.add('selected');
+    });
+    document.querySelectorAll('#form-overlay .status-opt').forEach(o => o.classList.remove('selected'));
+    const sel = document.querySelector(`#form-overlay .status-opt[data-val="${f.Status || '🟢'}"]`);
+    if (sel) sel.classList.add('selected');
+    /* Show actions section */
+    document.getElementById('form-actions-section').style.display = 'block';
+    document.getElementById('form-actions-list').innerHTML = '<div class="actions-empty">Cargando...</div>';
+    loadActionsIntoForm(id);
+    document.getElementById('form-overlay').classList.add('open');
+  }
+
+  async function loadActionsIntoForm(taskId) {
+    let records = [], offset = null;
+    do {
+      const url  = ACTIONS_URL + '?pageSize=100' + (offset ? '&offset=' + offset : '');
+      const res  = await fetch(url, { headers: HEADERS });
+      const data = await res.json();
+      records = records.concat(data.records || []);
+      offset  = data.offset || null;
+    } while (offset);
+    const recs = records.filter(r => {
+      const task = r.fields.Task;
+      if (!task) return false;
+      return Array.isArray(task) ? task.includes(taskId) : task === taskId;
+    });
+    const list = document.getElementById('form-actions-list');
+    if (!recs.length) { list.innerHTML = '<div class="actions-empty">Sin acciones todavía</div>'; return; }
+    list.innerHTML = recs.map(r => {
+      const f = r.fields;
+      return `<div class="action-row" onclick="openActionDetail('${r.id}')">
+        <div class="action-row-status">${f.Status||'🟢'}</div>
+        <div class="action-row-name">${esc(f.Name||'(sin título)')}</div>
+        <div class="action-row-arrow">›</div>
+      </div>`;
+    }).join('');
+  }
+
+  async function closeForm() {
+    if (draftTaskId) {
+      try {
+        await fetch(`${API_URL}/${draftTaskId}`, { method: 'DELETE', headers: HEADERS });
+        allRecords = allRecords.filter(r => r.id !== draftTaskId);
+        renderList();
+      } catch(e) { /* silent */ }
+      draftTaskId = null;
+    }
+    document.getElementById('form-overlay').classList.remove('open');
+  }
+
+  async function handleFormPrimary() {
+    const taskName = document.getElementById('f-task').value.trim();
+    if (!taskName) { alert('Por favor ingresa un nombre para la actividad'); return; }
+    const btn = document.getElementById('save-btn');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    const selStatus = document.querySelector('#form-overlay .status-opt.selected');
+    const pctVal    = parseInt(document.getElementById('f-progress').value);
+    const fields = {
+      Task:        taskName,
+      Project:     document.getElementById('f-project').value.trim(),
+      Area:        document.getElementById('f-area').value.trim(),
+      Status:      selStatus ? selStatus.dataset.val : '🟢',
+      Progress:    pctVal / 100,
+      Alert:       document.getElementById('f-alert').value.trim(),
+      Gantt:       document.getElementById('gantt-toggle').classList.contains('on'),
+      Responsible: [...document.querySelectorAll('#form-overlay .resp-opt.selected')].map(o => o.dataset.val),
+    };
+    try {
+      const targetId = editingId || draftTaskId;
+      const res = await fetch(targetId ? `${API_URL}/${targetId}` : API_URL, {
+        method:  targetId ? 'PATCH' : 'POST',
+        headers: HEADERS, body: JSON.stringify({ fields })
+      });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error.message); return; }
+      if (targetId) {
+        const idx = allRecords.findIndex(r => r.id === targetId);
+        if (idx !== -1) allRecords[idx] = data;
+      } else {
+        allRecords.unshift(data);
+      }
+      draftTaskId = null;
+      document.getElementById('form-overlay').classList.remove('open');
+      buildAreaChips(); renderList();
+    } catch(e) { alert('Error: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+  }
+
+  /* + Nueva acción inside form */
+  async function openNewActionFromForm() {
+    const taskName = document.getElementById('f-task').value.trim();
+    if (!taskName) {
+      alert('Ingresa el nombre de la actividad antes de agregar acciones');
+      document.getElementById('f-task').focus();
+      return;
+    }
+    /* Auto-save draft if first time */
+    if (!draftTaskId && !editingId) {
+      await ensureDraft();
+      if (!draftTaskId) return;
+    }
+    formActionsMode = true;
+    openNewAction();
+  }
+
+  async function ensureDraft() {
+    const selStatus = document.querySelector('#form-overlay .status-opt.selected');
+    const fields = {
+      Task:        document.getElementById('f-task').value.trim(),
+      Project:     document.getElementById('f-project').value.trim(),
+      Area:        document.getElementById('f-area').value.trim(),
+      Status:      selStatus ? selStatus.dataset.val : '🟢',
+      Progress:    parseInt(document.getElementById('f-progress').value) / 100,
+      Alert:       document.getElementById('f-alert').value.trim(),
+      Gantt:       document.getElementById('gantt-toggle').classList.contains('on'),
+      Responsible: [...document.querySelectorAll('#form-overlay .resp-opt.selected')].map(o => o.dataset.val),
+    };
+    try {
+      const res  = await fetch(API_URL, { method: 'POST', headers: HEADERS, body: JSON.stringify({ fields }) });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error.message); return; }
+      draftTaskId = data.id;
+      viewingId   = data.id;
+      allRecords.unshift(data);
+      renderList();
+      document.getElementById('form-actions-section').style.display = 'block';
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  async function refreshFormActions() {
+    const taskId = editingId || draftTaskId;
+    if (!taskId) return;
+    await loadActionsIntoForm(taskId);
+  }
+
+  async function saveRecord() {
+    const btn = document.getElementById('save-btn');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    const selStatus = document.querySelector('#form-overlay .status-opt.selected');
+    const pctVal    = parseInt(document.getElementById('f-progress').value);
+    const fields = {
+      Task:        document.getElementById('f-task').value.trim(),
+      Project:     document.getElementById('f-project').value.trim(),
+      Area:        document.getElementById('f-area').value.trim(),
+      Status:      selStatus ? selStatus.dataset.val : '🟢',
+      Progress:    pctVal / 100,
+      Alert:       document.getElementById('f-alert').value.trim(),
+      Gantt:       document.getElementById('gantt-toggle').classList.contains('on'),
+      Responsible: [...document.querySelectorAll('#form-overlay .resp-opt.selected')].map(o => o.dataset.val),
+    };
+    try {
+      const res  = await fetch(`${API_URL}/${editingId}`, { method: 'PATCH', headers: HEADERS, body: JSON.stringify({ fields }) });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error.message); return; }
+      const idx = allRecords.findIndex(r => r.id === editingId);
+      if (idx !== -1) allRecords[idx] = data;
+      document.getElementById('form-overlay').classList.remove('open');
+      buildAreaChips(); renderList();
+    } catch(e) { alert('Error: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+  }
+
+
+
+  function deleteWithPassword() {
+    const pwd = prompt('Ingresa la contraseña para eliminar:');
+    if (pwd === null) return; /* cancelled */
+    if (pwd !== 'M3tamorfosis') {
+      alert('Contraseña incorrecta');
+      return;
+    }
+    deleteRecord();
+  }
+
+  async function deleteRecord() {
+    if (!viewingId || !confirm('¿Eliminar esta actividad?')) return;
+    try {
+      const res  = await fetch(`${API_URL}/${viewingId}`, { method: 'DELETE', headers: HEADERS });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error.message); return; }
+      allRecords = allRecords.filter(r => r.id !== viewingId);
+      closeDetail(); buildAreaChips(); renderList();
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  async function loadRecords() {
+    const btn = document.getElementById('refresh-btn');
+    btn.classList.add('spinning');
+    try {
+      let records = [], offset = null;
+      do {
+        const url  = API_URL + '?pageSize=100' + (offset ? '&offset=' + offset : '');
+        const res  = await fetch(url, { headers: HEADERS });
+        const data = await res.json();
+        if (data.error) { showError(data.error.message); return; }
+        records = records.concat(data.records || []);
+        offset  = data.offset || null;
+      } while (offset);
+      allRecords = records;
+      buildAreaChips();
+      renderList();
+    } catch(e) { showError(e.message); }
+    finally { btn.classList.remove('spinning'); }
+  }
+
+  function showError(msg) {
+    document.getElementById('list').innerHTML = `<div class="error-box">Error: ${esc(msg)}</div>`;
+  }
+
+  function handleOverlay(e, id) {
+    if (e.target === document.getElementById(id))
+      document.getElementById(id).classList.remove('open');
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ── App switching ── */
+  let currentApp = 'actividades';
+
+  function refreshCurrentApp() {
+    if (currentApp === 'actividades') loadRecords();
+    else if (currentApp === 'cotizaciones') loadCotizaciones();
+    else if (currentApp === 'blueprints') loadBlueprints();
+  }
+
+  /* ── Hub Drawer ── */
+  function openDrawer() {
+    document.getElementById('drawer').classList.add('open');
+    document.getElementById('drawer-overlay').classList.add('open');
+    updateDrawerMeta();
+  }
+
+  function closeDrawer() {
+    document.getElementById('drawer').classList.remove('open');
+    document.getElementById('drawer-overlay').classList.remove('open');
+  }
+
+  function updateDrawerMeta() {
+    const green  = allRecords.filter(r => r.fields.Status === '🟢').length;
+    const yellow = allRecords.filter(r => r.fields.Status === '🟡').length;
+    const red    = allRecords.filter(r => r.fields.Status === '🔴').length;
+    document.getElementById('drawer-meta-actividades').textContent =
+      `🔴${red} 🟡${yellow} 🟢${green} · ${allRecords.length} actividades`;
+    const cg = allCotizaciones.filter(r => r.fields.Status === '🟢').length;
+    const cy = allCotizaciones.filter(r => r.fields.Status === '🟡').length;
+    const cr = allCotizaciones.filter(r => r.fields.Status === '🔴').length;
+    const total = allCotizaciones.reduce((s,r) => s + (Number(r.fields.Amount)||0), 0);
+    document.getElementById('drawer-meta-cotizaciones').textContent =
+      `🔴${cr} 🟡${cy} 🟢${cg} · $${total.toLocaleString()}`;
+    const bg = allBlueprints.filter(r => r.fields.Status === '🟢').length;
+    const by = allBlueprints.filter(r => r.fields.Status === '🟡').length;
+    const br = allBlueprints.filter(r => r.fields.Status === '🔴').length;
+    document.getElementById('drawer-meta-blueprints').textContent =
+      `🔴${br} 🟡${by} 🟢${bg} · ${allBlueprints.length} planos`;
+  }
+
+  function switchApp(app) {
+    closeDrawer();
+    currentApp = app;
+    /* Update drawer active state */
+    document.querySelectorAll('.drawer-app').forEach(el => el.classList.remove('active'));
+    document.getElementById('drawer-app-' + app).classList.add('active');
+
+    /* Hide all app containers first */
+    document.getElementById('list').style.display               = 'none';
+    document.getElementById('app-cotizaciones').style.display   = 'none';
+    document.getElementById('app-blueprints').style.display     = 'none';
+    document.querySelector('.search-wrap').style.display        = 'none';
+    document.getElementById('actividades-toolbar').style.display = 'none';
+    document.getElementById('fab-new').style.display            = 'none';
+    document.getElementById('fab-ai').style.display             = 'none';
+    document.getElementById('fab-cotiz').style.display          = 'none';
+    document.getElementById('fab-bp').style.display             = 'none';
+
+    if (app === 'actividades') {
+      document.getElementById('list').style.display              = 'block';
+      document.querySelector('.search-wrap').style.display       = 'block';
+      document.getElementById('actividades-toolbar').style.display = 'block';
+      document.getElementById('fab-new').style.display           = 'flex';
+      document.getElementById('fab-ai').style.display            = 'flex';
+      document.getElementById('title-area').textContent = activeArea.has('All') ? 'Todas las Actividades' : [...activeArea].join(', ');
+      updateHeader([]);
+    } else if (app === 'cotizaciones') {
+      document.getElementById('app-cotizaciones').style.display = 'block';
+      document.getElementById('fab-cotiz').style.display        = 'flex';
+      document.getElementById('title-area').textContent         = 'Cotizaciones';
+      document.getElementById('status-summary').innerHTML       = '';
+      loadCotizaciones();
+    } else if (app === 'blueprints') {
+      document.getElementById('app-blueprints').style.display   = 'block';
+      document.getElementById('fab-bp').style.display           = 'flex';
+      document.getElementById('title-area').textContent         = 'Diseños / Planos';
+      document.getElementById('status-summary').innerHTML       = '';
+      loadBlueprints();
+    }
+  }
+
+  /* ── Cotizaciones ── */
+  let allCotizaciones  = [];
+  let activeCotizStatus = new Set(['All']);
+  let activeCotizAreas  = new Set(['All']);
+  let viewingCotizId    = null;
+  let editingCotizId    = null;
+
+  async function loadCotizaciones() {
+    const btn = document.getElementById('refresh-btn');
+    btn.classList.add('spinning');
+    document.getElementById('cotiz-list').innerHTML =
+      '<div class="state-box"><div class="state-icon" style="animation:spin 1s linear infinite;display:inline-block;">⟳</div></div>';
+    try {
+      let records = [], offset = null;
+      do {
+        const url  = COTIZ_URL + '?pageSize=100' + (offset ? '&offset=' + offset : '');
+        const res  = await fetch(url, { headers: HEADERS });
+        const data = await res.json();
+        if (data.error) { showCotizError(data.error.message); return; }
+        records = records.concat(data.records || []);
+        offset  = data.offset || null;
+      } while (offset);
+      allCotizaciones = records;
+      renderCotizHeader();
+      renderCotizList();
+      updateDrawerMeta();
+    } catch(e) { showCotizError(e.message); }
+    finally { btn.classList.remove('spinning'); }
+  }
+
+  function renderCotizHeader() {
+    const green  = allCotizaciones.filter(r => r.fields.Status === '🟢').length;
+    const yellow = allCotizaciones.filter(r => r.fields.Status === '🟡').length;
+    const red    = allCotizaciones.filter(r => r.fields.Status === '🔴').length;
+    const total  = allCotizaciones.reduce((s,r) => s + (Number(r.fields.Amount)||0), 0);
+    document.getElementById('title-area').textContent = 'Cotizaciones';
+    document.getElementById('status-summary').innerHTML = `
+      <div class="status-pill"><span class="status-pill-icon">🔴</span><span class="status-pill-count">${red}</span></div>
+      <div class="status-summary-sep"></div>
+      <div class="status-pill"><span class="status-pill-icon">🟡</span><span class="status-pill-count">${yellow}</span></div>
+      <div class="status-summary-sep"></div>
+      <div class="status-pill"><span class="status-pill-icon">🟢</span><span class="status-pill-count">${green}</span></div>
+      <div class="status-summary-sep"></div>
+      <div class="status-total">$${total.toLocaleString()}</div>`;
+  }
+
+  function renderCotizList() {
+    let recs = [...allCotizaciones];
+    /* Status filter */
+    if (!activeCotizStatus.has('All'))
+      recs = recs.filter(r => activeCotizStatus.has(r.fields.Status || '🟡'));
+    /* Area filter */
+    if (!activeCotizAreas.has('All'))
+      recs = recs.filter(r => {
+        const areas = r.fields.Areas || [];
+        return (Array.isArray(areas) ? areas : [areas]).some(a => activeCotizAreas.has(a));
+      });
+
+    const list = document.getElementById('cotiz-list');
+    if (!recs.length) {
+      list.innerHTML = '<div class="state-box"><div class="state-icon">🔍</div>Sin cotizaciones</div>';
+      return;
+    }
+
+    /* Build area filter chips */
+    const allAreas = [...new Set(
+      allCotizaciones.flatMap(r => Array.isArray(r.fields.Areas) ? r.fields.Areas : (r.fields.Areas ? [r.fields.Areas] : []))
+    )].sort();
+
+    let html = `<div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:10px;align-items:center;">
+      <span class="toolbar-label">Status</span>
+      <div class="chip ${activeCotizStatus.has('All')?'active':''}" onclick="toggleCotizStatus('All')">All</div>
+      <div class="chip ${activeCotizStatus.has('🔴')?'active':''}" onclick="toggleCotizStatus('🔴')">🔴</div>
+      <div class="chip ${activeCotizStatus.has('🟡')?'active':''}" onclick="toggleCotizStatus('🟡')">🟡</div>
+      <div class="chip ${activeCotizStatus.has('🟢')?'active':''}" onclick="toggleCotizStatus('🟢')">🟢</div>
+    </div>`;
+
+    if (allAreas.length) {
+      html += `<div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:10px;align-items:center;">
+        <span class="toolbar-label">Area</span>
+        <div class="chip ${activeCotizAreas.has('All')?'active':''}" onclick="toggleCotizArea('All')">All</div>
+        ${allAreas.map(a => `<div class="chip ${activeCotizAreas.has(a)?'active':''}" onclick="toggleCotizArea('${esc(a)}')">${esc(a)}</div>`).join('')}
+      </div>`;
+    }
+
+    html += recs.map(r => {
+      const f      = r.fields;
+      const status = f.Status || '🟡';
+      const areas  = Array.isArray(f.Areas) ? f.Areas.join(', ') : (f.Areas || '');
+      const amount = f.Amount ? '$' + Number(f.Amount).toLocaleString() : '—';
+      return `<div class="cotiz-row" onclick="openCotizDetail('${r.id}')">
+        <div class="cotiz-status">${status}</div>
+        <div class="cotiz-info">
+          <div class="cotiz-name">${esc(f.Name||'(sin nombre)')}</div>
+          <div class="cotiz-vendor">${esc(f.Vendor||'—')}${areas ? ' · ' + esc(areas) : ''}</div>
+        </div>
+        <div class="cotiz-amount">${amount}</div>
+      </div>`;
+    }).join('');
+
+    list.innerHTML = html;
+  }
+
+  function toggleCotizStatus(val) {
+    if (val === 'All') { activeCotizStatus = new Set(['All']); }
+    else {
+      activeCotizStatus.delete('All');
+      activeCotizStatus.has(val) ? activeCotizStatus.delete(val) : activeCotizStatus.add(val);
+      if (!activeCotizStatus.size) activeCotizStatus = new Set(['All']);
+    }
+    renderCotizList();
+  }
+
+  function toggleCotizArea(val) {
+    if (val === 'All') { activeCotizAreas = new Set(['All']); }
+    else {
+      activeCotizAreas.delete('All');
+      activeCotizAreas.has(val) ? activeCotizAreas.delete(val) : activeCotizAreas.add(val);
+      if (!activeCotizAreas.size) activeCotizAreas = new Set(['All']);
+    }
+    renderCotizList();
+  }
+
+  function openCotizDetail(id) {
+    viewingCotizId = id;
+    const r = allCotizaciones.find(x => x.id === id);
+    if (!r) return;
+    const f = r.fields;
+    const areas  = Array.isArray(f.Areas) ? f.Areas.join(', ') : (f.Areas || '—');
+    const amount = f.Amount ? '$' + Number(f.Amount).toLocaleString() : '—';
+    /* Build attachments section */
+    const attachments = f.Attachment || [];
+    let attachHtml = '';
+    if (attachments.length) {
+      const images = attachments.filter(a => a.type && a.type.startsWith('image/'));
+      const others = attachments.filter(a => !a.type || !a.type.startsWith('image/'));
+      if (images.length) {
+        attachHtml += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-bottom:10px;">`;
+        images.forEach(a => {
+          attachHtml += `<a href="${esc(a.url)}" target="_blank" style="display:block;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border);">
+            <img src="${esc(a.url)}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;" loading="lazy">
+            <div style="padding:4px 6px;font-size:10px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(a.filename||'')}</div>
+          </a>`;
+        });
+        attachHtml += `</div>`;
+      }
+      others.forEach(a => {
+        attachHtml += `<a href="${esc(a.url)}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm);margin-bottom:6px;text-decoration:none;">
+          <span style="font-size:16px;">📄</span>
+          <span style="flex:1;font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(a.filename||'Archivo')}</span>
+          <span style="font-size:11px;color:#2563eb;">Abrir</span>
+        </a>`;
+      });
+    }
+
+    document.getElementById('cotiz-detail-content').innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+        <span style="font-size:26px;">${f.Status||'🟡'}</span>
+        <div style="font-size:19px;font-weight:600;color:var(--text);line-height:1.3;flex:1;">${esc(f.Name||'(sin nombre)')}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        ${[
+          ['Vendor', f.Vendor||'—'],
+          ['Monto', amount],
+          ['Quote ID', f.QuoteID||'—'],
+          ['Áreas', areas],
+        ].map(([l,v]) => `<div class="detail-field"><div class="detail-field-label">${l}</div><div class="detail-field-value">${esc(String(v))}</div></div>`).join('')}
+      </div>
+      ${f.URL ? `<a href="${esc(f.URL)}" target="_blank" style="display:block;width:100%;height:44px;line-height:44px;text-align:center;background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius-sm);color:#2563eb;font-size:14px;font-weight:500;text-decoration:none;margin-bottom:10px;">🔗 Ver cotización</a>` : ''}
+      ${attachments.length ? `<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);font-weight:600;margin-bottom:8px;">Adjuntos</div>${attachHtml}` : ''}
+    `;
+    document.getElementById('cotiz-detail-overlay').classList.add('open');
+  }
+
+  function closeCotizDetail() {
+    document.getElementById('cotiz-detail-overlay').classList.remove('open');
+  }
+
+  function openEditCotiz() {
+    closeCotizDetail();
+    const r = allCotizaciones.find(x => x.id === viewingCotizId);
+    if (!r) return;
+    editingCotizId = viewingCotizId;
+    populateCotizForm(r.fields);
+    document.getElementById('cotiz-form-title').textContent = 'Editar cotización';
+    document.getElementById('cotiz-form-overlay').classList.add('open');
+  }
+
+  function openNewCotiz() {
+    editingCotizId = null;
+    populateCotizForm({});
+    document.getElementById('cotiz-form-title').textContent = 'Nueva cotización';
+    document.getElementById('cotiz-form-overlay').classList.add('open');
+  }
+
+  function populateCotizForm(f) {
+    document.getElementById('cf-name').value    = f.Name    || '';
+    document.getElementById('cf-vendor').value  = f.Vendor  || '';
+    document.getElementById('cf-amount').value  = f.Amount  || '';
+    document.getElementById('cf-quoteid').value = f.QuoteID || '';
+    document.getElementById('cf-url').value     = f.URL     || '';
+    /* Status picker */
+    document.querySelectorAll('#cotiz-status-picker .status-opt').forEach(o => o.classList.remove('selected'));
+    const sel = document.querySelector(`#cotiz-status-picker .status-opt[data-val="${f.Status||'🟡'}"]`);
+    if (sel) sel.classList.add('selected');
+    /* Areas picker — build from allRecords areas */
+    const areas = [...new Set(allRecords.map(r => r.fields.Area).filter(a => a && a.trim()))];
+    const selectedAreas = Array.isArray(f.Areas) ? f.Areas : (f.Areas ? [f.Areas] : []);
+    document.getElementById('cotiz-areas-picker').innerHTML = areas.map(a =>
+      `<div class="resp-opt ${selectedAreas.includes(a)?'selected':''}" data-val="${esc(a)}" onclick="toggleResp(this)">${esc(a)}</div>`
+    ).join('');
+  }
+
+  function closeCotizForm() {
+    document.getElementById('cotiz-form-overlay').classList.remove('open');
+  }
+
+  async function saveCotiz() {
+    const btn = document.getElementById('cotiz-save-btn');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    const sel = document.querySelector('#cotiz-status-picker .status-opt.selected');
+    const fields = {
+      Name:   document.getElementById('cf-name').value.trim(),
+      Status: sel ? sel.dataset.val : '🟡',
+      Areas:  [...document.querySelectorAll('#cotiz-areas-picker .resp-opt.selected')].map(o => o.dataset.val),
+    };
+    const vendor  = document.getElementById('cf-vendor').value.trim();
+    const amount  = document.getElementById('cf-amount').value;
+    const quoteId = document.getElementById('cf-quoteid').value.trim();
+    const url     = document.getElementById('cf-url').value.trim();
+    if (vendor)  fields.Vendor  = vendor;
+    if (amount)  fields.Amount  = parseFloat(amount) || 0;
+    if (quoteId) fields.QuoteID = quoteId;
+    if (url)     fields.URL     = url;
+    try {
+      const res = await fetch(editingCotizId ? `${COTIZ_URL}/${editingCotizId}` : COTIZ_URL, {
+        method:  editingCotizId ? 'PATCH' : 'POST',
+        headers: HEADERS, body: JSON.stringify({ fields })
+      });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error.message); return; }
+      if (editingCotizId) {
+        const idx = allCotizaciones.findIndex(r => r.id === editingCotizId);
+        if (idx !== -1) allCotizaciones[idx] = data;
+      } else {
+        allCotizaciones.unshift(data);
+      }
+      closeCotizForm();
+      renderCotizHeader();
+      renderCotizList();
+      updateDrawerMeta();
+    } catch(e) { alert('Error: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+  }
+
+  function showCotizError(msg) {
+    document.getElementById('cotiz-list').innerHTML =
+      `<div class="error-box">Error: ${esc(msg)}</div>`;
+  }
+
+  /* ── Blueprints ── */
+  let allBlueprints    = [];
+  let activeBpStatus   = new Set(['All']);
+  let activeBpAreas    = new Set(['All']);
+  let viewingBpId      = null;
+  let editingBpId      = null;
+
+  const STATUS_LABEL_BP = { '🟢': 'Vigente', '🟡': 'En revisión', '🔴': 'Obsoleto' };
+  const TYPE_ICON = { RVT: '🏗️', CAD: '📐', PDF: '📄', IMG: '🖼️', Other: '📎' };
+
+  async function loadBlueprints() {
+    const btn = document.getElementById('refresh-btn');
+    btn.classList.add('spinning');
+    document.getElementById('bp-list').innerHTML =
+      '<div class="state-box"><div class="state-icon" style="animation:spin 1s linear infinite;display:inline-block;">⟳</div></div>';
+    try {
+      let records = [], offset = null;
+      do {
+        const url  = BP_URL + '?pageSize=100' + (offset ? '&offset=' + offset : '');
+        const res  = await fetch(url, { headers: HEADERS });
+        const data = await res.json();
+        if (data.error) { showBpError(data.error.message); return; }
+        records = records.concat(data.records || []);
+        offset  = data.offset || null;
+      } while (offset);
+      allBlueprints = records;
+      renderBpHeader();
+      renderBpList();
+      updateDrawerMeta();
+    } catch(e) { showBpError(e.message); }
+    finally { btn.classList.remove('spinning'); }
+  }
+
+  function renderBpHeader() {
+    const green  = allBlueprints.filter(r => r.fields.Status === '🟢').length;
+    const yellow = allBlueprints.filter(r => r.fields.Status === '🟡').length;
+    const red    = allBlueprints.filter(r => r.fields.Status === '🔴').length;
+    document.getElementById('status-summary').innerHTML = `
+      <div class="status-pill"><span class="status-pill-icon">🔴</span><span class="status-pill-count">${red}</span></div>
+      <div class="status-summary-sep"></div>
+      <div class="status-pill"><span class="status-pill-icon">🟡</span><span class="status-pill-count">${yellow}</span></div>
+      <div class="status-summary-sep"></div>
+      <div class="status-pill"><span class="status-pill-icon">🟢</span><span class="status-pill-count">${green}</span></div>
+      <div class="status-summary-sep"></div>
+      <div class="status-total">${allBlueprints.length} planos</div>`;
+  }
+
+  function renderBpList() {
+    let recs = [...allBlueprints];
+    if (!activeBpStatus.has('All'))
+      recs = recs.filter(r => activeBpStatus.has(r.fields.Status || '🟢'));
+    if (!activeBpAreas.has('All'))
+      recs = recs.filter(r => {
+        const areas = r.fields.Area || [];
+        return (Array.isArray(areas) ? areas : [areas]).some(a => activeBpAreas.has(a));
+      });
+
+    /* Sort by date descending */
+    recs.sort((a,b) => {
+      const da = a.fields.Date || '', db = b.fields.Date || '';
+      return db.localeCompare(da);
+    });
+
+    const list = document.getElementById('bp-list');
+    const allAreas = [...new Set(
+      allBlueprints.flatMap(r => Array.isArray(r.fields.Area) ? r.fields.Area : (r.fields.Area ? [r.fields.Area] : []))
+    )].sort();
+
+    let html = `<div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:6px;align-items:center;">
+      <span class="toolbar-label">Status</span>
+      <div class="chip ${activeBpStatus.has('All')?'active':''}" onclick="toggleBpStatus('All')">All</div>
+      <div class="chip ${activeBpStatus.has('🟢')?'active':''}" onclick="toggleBpStatus('🟢')">🟢</div>
+      <div class="chip ${activeBpStatus.has('🟡')?'active':''}" onclick="toggleBpStatus('🟡')">🟡</div>
+      <div class="chip ${activeBpStatus.has('🔴')?'active':''}" onclick="toggleBpStatus('🔴')">🔴</div>
+    </div>`;
+
+    if (allAreas.length) {
+      html += `<div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:10px;align-items:center;">
+        <span class="toolbar-label">Area</span>
+        <div class="chip ${activeBpAreas.has('All')?'active':''}" onclick="toggleBpArea('All')">All</div>
+        ${allAreas.map(a => `<div class="chip ${activeBpAreas.has(a)?'active':''}" onclick="toggleBpArea('${esc(a)}')">${esc(a)}</div>`).join('')}
+      </div>`;
+    }
+
+    if (!recs.length) {
+      html += '<div class="state-box"><div class="state-icon">🔍</div>Sin planos</div>';
+      list.innerHTML = html; return;
+    }
+
+    html += recs.map(r => {
+      const f      = r.fields;
+      const status = f.Status || '🟢';
+      const type   = f.Type   || '';
+      const icon   = TYPE_ICON[type] || '📎';
+      const disc   = f.Discipline || '';
+      const ver    = f.Version ? `v${f.Version}` : '';
+      const date   = f.Date ? new Date(f.Date).toLocaleDateString('es-CO', {day:'2-digit',month:'short',year:'numeric'}) : '';
+      return `<div class="cotiz-row" onclick="openBpDetail('${r.id}')">
+        <div class="cotiz-status">${status}</div>
+        <div style="font-size:18px;flex-shrink:0;">${icon}</div>
+        <div class="cotiz-info">
+          <div class="cotiz-name">${esc(f.Name||'(sin nombre)')}</div>
+          <div class="cotiz-vendor">${[disc, ver, date].filter(Boolean).join(' · ')}</div>
+        </div>
+        ${f['Viewer URL'] ? `<a href="${esc(f['Viewer URL'])}" target="_blank" onclick="event.stopPropagation()" style="font-size:11px;color:#2563eb;flex-shrink:0;padding:4px 8px;background:#eff6ff;border-radius:4px;text-decoration:none;">Ver</a>` : ''}
+      </div>`;
+    }).join('');
+
+    list.innerHTML = html;
+  }
+
+  function toggleBpStatus(val) {
+    if (val === 'All') { activeBpStatus = new Set(['All']); }
+    else {
+      activeBpStatus.delete('All');
+      activeBpStatus.has(val) ? activeBpStatus.delete(val) : activeBpStatus.add(val);
+      if (!activeBpStatus.size) activeBpStatus = new Set(['All']);
+    }
+    renderBpList();
+  }
+
+  function toggleBpArea(val) {
+    if (val === 'All') { activeBpAreas = new Set(['All']); }
+    else {
+      activeBpAreas.delete('All');
+      activeBpAreas.has(val) ? activeBpAreas.delete(val) : activeBpAreas.add(val);
+      if (!activeBpAreas.size) activeBpAreas = new Set(['All']);
+    }
+    renderBpList();
+  }
+
+  function openBpDetail(id) {
+    viewingBpId = id;
+    const r = allBlueprints.find(x => x.id === id);
+    if (!r) return;
+    const f      = r.fields;
+    const areas  = Array.isArray(f.Area) ? f.Area.join(', ') : (f.Area || '—');
+    const date   = f.Date ? new Date(f.Date).toLocaleDateString('es-CO', {day:'2-digit',month:'long',year:'numeric'}) : '—';
+    const attachments = f.File || [];
+
+    let attachHtml = '';
+    if (attachments.length) {
+      const images = attachments.filter(a => a.type && a.type.startsWith('image/'));
+      const others = attachments.filter(a => !a.type || !a.type.startsWith('image/'));
+      if (images.length) {
+        attachHtml += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-bottom:10px;">`;
+        images.forEach(a => {
+          attachHtml += `<a href="${esc(a.url)}" target="_blank" style="display:block;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border);">
+            <img src="${esc(a.url)}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block;" loading="lazy">
+          </a>`;
+        });
+        attachHtml += `</div>`;
+      }
+      others.forEach(a => {
+        attachHtml += `<a href="${esc(a.url)}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm);margin-bottom:6px;text-decoration:none;">
+          <span style="font-size:16px;">${TYPE_ICON[f.Type]||'📎'}</span>
+          <span style="flex:1;font-size:13px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;">${esc(a.filename||'Archivo')}</span>
+          <span style="font-size:11px;color:#2563eb;">Abrir</span>
+        </a>`;
+      });
+    }
+
+    document.getElementById('bp-detail-content').innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <span style="font-size:26px;">${f.Status||'🟢'}</span>
+        <div style="flex:1;">
+          <div style="font-size:19px;font-weight:600;color:var(--text);line-height:1.3;">${esc(f.Name||'(sin nombre)')}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px;">${[f.Type||'',f.Discipline||''].filter(Boolean).join(' · ')}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        ${[['Versión',f.Version||'—'],['Fecha',date],['Área',areas],['Status',STATUS_LABEL_BP[f.Status]||'—']]
+          .map(([l,v]) => `<div class="detail-field"><div class="detail-field-label">${l}</div><div class="detail-field-value">${esc(String(v))}</div></div>`).join('')}
+      </div>
+      ${f['Viewer URL'] ? `<a href="${esc(f['Viewer URL'])}" target="_blank" style="display:block;width:100%;height:44px;line-height:44px;text-align:center;background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius-sm);color:#2563eb;font-size:14px;font-weight:500;text-decoration:none;margin-bottom:10px;">🖥️ Abrir en visor</a>` : ''}
+      ${f.Notes ? `<div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:12px;">${esc(f.Notes)}</div>` : ''}
+      ${attachments.length ? `<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);font-weight:600;margin-bottom:8px;">Archivos adjuntos</div>${attachHtml}` : ''}
+    `;
+    document.getElementById('bp-detail-overlay').classList.add('open');
+  }
+
+  function closeBpDetail() {
+    document.getElementById('bp-detail-overlay').classList.remove('open');
+  }
+
+  function openEditBp() {
+    closeBpDetail();
+    const r = allBlueprints.find(x => x.id === viewingBpId);
+    if (!r) return;
+    editingBpId = viewingBpId;
+    populateBpForm(r.fields);
+    document.getElementById('bp-form-title').textContent = 'Editar diseño';
+    document.getElementById('bp-form-overlay').classList.add('open');
+  }
+
+  function openNewBp() {
+    editingBpId = null;
+    populateBpForm({});
+    document.getElementById('bp-form-title').textContent = 'Nuevo diseño';
+    document.getElementById('bp-form-overlay').classList.add('open');
+  }
+
+  function populateBpForm(f) {
+    document.getElementById('bf-name').value      = f.Name      || '';
+    document.getElementById('bf-version').value   = f.Version   || '';
+    document.getElementById('bf-date').value      = f.Date      || '';
+    document.getElementById('bf-viewer').value    = f['Viewer URL'] || '';
+    document.getElementById('bf-notes').value     = f.Notes     || '';
+    document.getElementById('bf-type').value      = f.Type      || '';
+    document.getElementById('bf-discipline').value = f.Discipline || '';
+    document.querySelectorAll('#bp-status-picker .status-opt').forEach(o => o.classList.remove('selected'));
+    const sel = document.querySelector(`#bp-status-picker .status-opt[data-val="${f.Status||'🟢'}"]`);
+    if (sel) sel.classList.add('selected');
+    const areas = [...new Set(allRecords.map(r => r.fields.Area).filter(a => a && a.trim()))];
+    const selAreas = Array.isArray(f.Area) ? f.Area : (f.Area ? [f.Area] : []);
+    document.getElementById('bp-areas-picker').innerHTML = areas.map(a =>
+      `<div class="resp-opt ${selAreas.includes(a)?'selected':''}" data-val="${esc(a)}" onclick="toggleResp(this)">${esc(a)}</div>`
+    ).join('');
+  }
+
+  function closeBpForm() {
+    document.getElementById('bp-form-overlay').classList.remove('open');
+  }
+
+  async function saveBp() {
+    const btn = document.getElementById('bp-save-btn');
+    btn.disabled = true; btn.textContent = 'Guardando...';
+    const sel = document.querySelector('#bp-status-picker .status-opt.selected');
+    const fields = {
+      Name:         document.getElementById('bf-name').value.trim(),
+      Status:       sel ? sel.dataset.val : '🟢',
+      Area:         [...document.querySelectorAll('#bp-areas-picker .resp-opt.selected')].map(o => o.dataset.val),
+    };
+    /* Only add optional fields if they have a value */
+    const version    = document.getElementById('bf-version').value.trim();
+    const date       = document.getElementById('bf-date').value;
+    const viewer     = document.getElementById('bf-viewer').value.trim();
+    const notes      = document.getElementById('bf-notes').value.trim();
+    const type       = document.getElementById('bf-type').value;
+    const discipline = document.getElementById('bf-discipline').value;
+    if (version)    fields.Version      = version;
+    if (date)       fields.Date         = date;
+    if (viewer)     fields['Viewer URL'] = viewer;
+    if (notes)      fields.Notes        = notes;
+    if (type)       fields.Type         = type;
+    if (discipline) fields.Discipline   = discipline;
+    try {
+      const res = await fetch(editingBpId ? `${BP_URL}/${editingBpId}` : BP_URL, {
+        method:  editingBpId ? 'PATCH' : 'POST',
+        headers: HEADERS, body: JSON.stringify({ fields })
+      });
+      const data = await res.json();
+      if (data.error) { alert('Error: ' + data.error.message); return; }
+      if (editingBpId) {
+        const idx = allBlueprints.findIndex(r => r.id === editingBpId);
+        if (idx !== -1) allBlueprints[idx] = data;
+      } else {
+        allBlueprints.unshift(data);
+      }
+      closeBpForm();
+      renderBpHeader();
+      renderBpList();
+      updateDrawerMeta();
+    } catch(e) { alert('Error: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+  }
+
+  function showBpError(msg) {
+    document.getElementById('bp-list').innerHTML = `<div class="error-box">Error: ${esc(msg)}</div>`;
+  }
+
+  loadRecords();
+</script>
+</body>
+</html>
