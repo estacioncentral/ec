@@ -1,0 +1,2069 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dependencias · Estación Central</title>
+<script type="text/javascript" src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f5f6f8;
+    color: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ============ HEADER ============ */
+  .header {
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .header-left { display: flex; flex-direction: column; gap: 2px; }
+  .title-station {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    letter-spacing: 0.3px;
+  }
+  .title-app { font-size: 18px; font-weight: 700; color: #111; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .saved-status {
+    font-size: 11px;
+    color: #6b7280;
+    margin-right: 6px;
+  }
+  .saved-status.dirty { color: #d97706; font-weight: 600; }
+  .week-pill {
+    font-size: 11px;
+    font-weight: 700;
+    background: #fef3c7;
+    color: #92400e;
+    padding: 3px 9px;
+    border-radius: 10px;
+    letter-spacing: 0.3px;
+    margin-right: 4px;
+  }
+  .week-pill:empty { display: none; }
+  .icon-btn {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .icon-btn:hover { background: #f3f4f6; }
+  .icon-btn:active { transform: scale(0.96); }
+
+  /* ============ TOOLBAR ============ */
+  .toolbar {
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    flex-shrink: 0;
+  }
+  .toolbar::-webkit-scrollbar { height: 4px; }
+  .toolbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+
+  .tool-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tool-btn:active { transform: scale(0.96); }
+  .tool-btn.add-act { background: #dbeafe; color: #1e40af; }
+  .tool-btn.add-act:hover { background: #bfdbfe; }
+  .tool-btn.add-cot { background: #d1fae5; color: #065f46; }
+  .tool-btn.add-cot:hover { background: #a7f3d0; }
+  .tool-btn.add-cor { background: #cffafe; color: #155e75; }
+  .tool-btn.add-cor:hover { background: #a5f3fc; }
+  .tool-btn.add-are { background: #ede9fe; color: #5b21b6; }
+  .tool-btn.add-are:hover { background: #ddd6fe; }
+  .tool-btn.add-mile { background: #fef3c7; color: #92400e; }
+  .tool-btn.add-mile:hover { background: #fde68a; }
+  .tool-btn.add-dec { background: #ede9fe; color: #5b21b6; }
+  .tool-btn.add-dec:hover { background: #ddd6fe; }
+  .tool-btn.add-cust { background: #f3f4f6; color: #374151; }
+  .tool-btn.add-cust:hover { background: #e5e7eb; }
+  .tool-btn.save {
+    background: #111827;
+    color: #fff;
+    margin-left: auto;
+  }
+  .tool-btn.save:hover { background: #000; }
+  .tool-btn.save.dirty {
+    background: #d97706;
+    animation: pulse 1.5s infinite;
+  }
+  .tool-btn.save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    animation: none;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(217, 119, 6, 0); }
+  }
+  .tool-divider {
+    width: 1px;
+    height: 24px;
+    background: #e5e7eb;
+    margin: 0 4px;
+  }
+
+  /* ============ LEGEND ============ */
+  .legend {
+    background: #fafbfc;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 6px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 11px;
+    color: #4b5563;
+    flex-shrink: 0;
+  }
+  .legend-item { display: inline-flex; align-items: center; gap: 5px; }
+  .legend-shape {
+    width: 14px;
+    height: 14px;
+    background: #9ca3af;
+    flex-shrink: 0;
+  }
+  .legend-shape.box { border-radius: 3px; }
+  .legend-shape.ellipse { border-radius: 50%; height: 10px; margin-top: 2px; }
+  .legend-shape.diamond {
+    transform: rotate(45deg);
+    width: 10px; height: 10px;
+    margin: 2px;
+  }
+  .legend-shape.triangle {
+    width: 0; height: 0;
+    background: none;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 12px solid #9ca3af;
+    margin-top: 1px;
+  }
+  .legend-shape.cylinder {
+    width: 12px;
+    height: 14px;
+    background: #9ca3af;
+    border-radius: 50% / 25%;
+    position: relative;
+  }
+  .legend-shape.cylinder::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: #6b7280;
+    border-radius: 50%;
+  }
+  .legend-shape.star {
+    background: none;
+    color: #f59e0b;
+    width: auto; height: auto;
+    font-size: 14px;
+  }
+  .legend-shape.hex {
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  }
+  .legend-color {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ============ NETWORK CANVAS ============ */
+  #network-container {
+    flex: 1;
+    background: #f5f6f8;
+    background-image:
+      radial-gradient(circle, #e5e7eb 1px, transparent 1px);
+    background-size: 20px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  #network { width: 100%; height: 100%; }
+
+  /* Empty state */
+  .empty-state {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: #9ca3af;
+    pointer-events: none;
+  }
+  .empty-state-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; color: #6b7280; }
+  .empty-state-sub { font-size: 13px; }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 100;
+  }
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #111827;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ============ MODAL ============ */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+  }
+  .modal-header {
+    padding: 16px 18px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-title { font-size: 16px; font-weight: 700; }
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    color: #6b7280;
+    line-height: 1;
+  }
+  .modal-search {
+    padding: 12px 18px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .modal-search input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+  }
+  .modal-search input:focus { border-color: #2563eb; }
+  .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+  .picker-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .picker-item:hover { background: #f3f4f6; }
+  .picker-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .picker-item.disabled:hover { background: transparent; }
+  .picker-item-status {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .picker-item-status-emoji {
+    font-size: 14px;
+    line-height: 1;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .picker-item-status-spacer {
+    width: 16px;
+    flex-shrink: 0;
+  }
+  .picker-item-text { flex: 1; min-width: 0; }
+  .picker-item-name {
+    font-size: 13px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .picker-item-meta {
+    font-size: 11px;
+    color: #6b7280;
+    margin-top: 2px;
+  }
+  .picker-item-added {
+    font-size: 10px;
+    background: #d1fae5;
+    color: #065f46;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  /* Activity picker — area group dividers */
+  .picker-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px 4px;
+    margin-top: 4px;
+    border-top: 1px solid #f3f4f6;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #6b7280;
+    font-weight: 700;
+    background: #fafbfc;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .picker-group-header:first-child { border-top: none; margin-top: 0; }
+  .picker-group-count {
+    background: #e5e7eb;
+    color: #374151;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    letter-spacing: 0;
+  }
+
+  /* Free-form node input */
+  .freeform-form { padding: 16px 18px; }
+  .freeform-form label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #374151;
+  }
+  .freeform-form input,
+  .freeform-form textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    margin-bottom: 12px;
+    outline: none;
+  }
+  .freeform-form input:focus,
+  .freeform-form textarea:focus { border-color: #2563eb; }
+  .freeform-form textarea { resize: vertical; min-height: 60px; }
+  .freeform-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 12px 18px;
+    border-top: 1px solid #e5e7eb;
+  }
+  .btn-cancel, .btn-confirm {
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+  }
+  .btn-cancel { background: #f3f4f6; color: #374151; }
+  .btn-confirm { background: #111827; color: #fff; }
+
+  /* ============ TOAST ============ */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #111827;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    opacity: 0;
+    transition: all 0.25s;
+    z-index: 2000;
+    pointer-events: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .toast.success { background: #059669; }
+  .toast.error { background: #dc2626; }
+
+  /* vis-network tooltip — used to surface the activity Alert text */
+  .vis-tooltip {
+    background: #1f2937 !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 10px 12px !important;
+    font-family: -apple-system, "Segoe UI", sans-serif !important;
+    font-size: 12px !important;
+    line-height: 1.45 !important;
+    max-width: 280px !important;
+    white-space: pre-wrap !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25) !important;
+  }
+
+  /* ============ NODE CONTEXT MENU ============ */
+  .ctx-menu {
+    position: fixed;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    padding: 4px;
+    z-index: 1500;
+    display: none;
+    min-width: 160px;
+  }
+  .ctx-menu.show { display: block; }
+  .ctx-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ctx-item:hover { background: #f3f4f6; }
+  .ctx-item.danger { color: #dc2626; }
+  .ctx-item.danger:hover { background: #fee2e2; }
+  .ctx-divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<div class="header">
+  <div class="header-left">
+    <div class="title-station">Estación Central</div>
+    <div class="title-app">Dependencias</div>
+  </div>
+  <div class="header-right">
+    <span class="week-pill" id="week-pill" title="Semana actual del proyecto"></span>
+    <span class="saved-status" id="saved-status">—</span>
+    <button class="icon-btn" onclick="reloadGraph()" title="Recargar">↻</button>
+    <button class="icon-btn" onclick="window.close()" title="Cerrar">✕</button>
+  </div>
+</div>
+
+<!-- ============ TOOLBAR ============ -->
+<div class="toolbar">
+  <button class="tool-btn add-act" onclick="openPicker('actividad')">+ Actividad</button>
+  <button class="tool-btn add-cot" onclick="openPicker('cotizacion')">+ Cotización</button>
+  <button class="tool-btn add-cor" onclick="openPicker('partida')">+ Corte</button>
+  <button class="tool-btn add-are" onclick="openPicker('area')">+ Área</button>
+  <div class="tool-divider"></div>
+  <button class="tool-btn add-mile" onclick="openFreeform('milestone')">+ Hito</button>
+  <button class="tool-btn add-dec" onclick="openFreeform('decision')">+ Decisión</button>
+  <button class="tool-btn add-cust" onclick="openFreeform('custom')">+ Personalizado</button>
+  <div class="tool-divider"></div>
+  <button class="tool-btn add-cust" onclick="toggleEdgeMode()" id="edge-mode-btn">↔ Conectar</button>
+  <button class="tool-btn add-cust" onclick="reorganizeByArea()" title="Reorganizar actividades por área">⊞ Por Área</button>
+  <button class="tool-btn save" id="save-btn" onclick="saveLayout()">💾 Guardar</button>
+</div>
+
+<!-- ============ LEGEND ============ -->
+<div class="legend">
+  <span class="legend-item"><span class="legend-shape box"></span>Actividad</span>
+  <span class="legend-item"><span class="legend-shape ellipse"></span>Cotización</span>
+  <span class="legend-item"><span class="legend-shape triangle"></span>Corte</span>
+  <span class="legend-item"><span class="legend-shape cylinder"></span>Área</span>
+  <span class="legend-item"><span class="legend-shape star">★</span>Hito</span>
+  <span class="legend-item"><span class="legend-shape diamond"></span>Decisión</span>
+  <span class="legend-item"><span class="legend-shape hex"></span>Personalizado</span>
+  <div class="tool-divider"></div>
+  <span class="legend-item"><span class="legend-color" style="background:#dc2626"></span>🔴</span>
+  <span class="legend-item"><span class="legend-color" style="background:#f59e0b"></span>🟡</span>
+  <span class="legend-item"><span class="legend-color" style="background:#10b981"></span>🟢</span>
+  <span class="legend-item"><span class="legend-color" style="background:#3b82f6"></span>🔵</span>
+  <span class="legend-item"><span class="legend-color" style="background:#9ca3af"></span>〇</span>
+</div>
+
+<!-- ============ NETWORK ============ -->
+<div id="network-container">
+  <div id="network"></div>
+  <div class="empty-state" id="empty-state" style="display:none;">
+    <div class="empty-state-icon">🕸️</div>
+    <div class="empty-state-title">Lienzo vacío</div>
+    <div class="empty-state-sub">Añade actividades, cotizaciones o nodos personalizados desde la barra superior</div>
+  </div>
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+    <div style="font-size:13px;color:#6b7280;">Cargando grafo…</div>
+  </div>
+</div>
+
+<!-- ============ PICKER MODAL ============ -->
+<div class="modal-overlay" id="picker-modal" onclick="if(event.target===this)closePicker()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="picker-title">Seleccionar</div>
+      <button class="modal-close" onclick="closePicker()">×</button>
+    </div>
+    <div class="modal-search">
+      <input type="text" id="picker-search" placeholder="Buscar..." oninput="filterPicker()" />
+    </div>
+    <div class="modal-body" id="picker-body"></div>
+  </div>
+</div>
+
+<!-- ============ FREE-FORM MODAL ============ -->
+<div class="modal-overlay" id="freeform-modal" onclick="if(event.target===this)closeFreeform()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="freeform-title">Nuevo nodo</div>
+      <button class="modal-close" onclick="closeFreeform()">×</button>
+    </div>
+    <div class="freeform-form">
+      <label>Etiqueta</label>
+      <input type="text" id="freeform-label" placeholder="Ej: Aprobación METAMORFOSIS" />
+      <label>Notas (opcional)</label>
+      <textarea id="freeform-notes" placeholder="Detalles adicionales..."></textarea>
+    </div>
+    <div class="freeform-actions">
+      <button class="btn-cancel" onclick="closeFreeform()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmFreeform()">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ EDGE EDITOR MODAL ============ -->
+<div class="modal-overlay" id="edge-modal" onclick="if(event.target===this)closeEdgeModal()">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title">Tipo de conexión</div>
+      <button class="modal-close" onclick="closeEdgeModal()">×</button>
+    </div>
+    <div class="freeform-form">
+      <label>Relación</label>
+      <select id="edge-type-select" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">
+        <option value="depends_on">Depende de (→)</option>
+        <option value="blocks">Bloquea a (⊗)</option>
+        <option value="relates_to">Se relaciona con (--)</option>
+        <option value="feeds_into">Alimenta a (⇒)</option>
+      </select>
+      <label style="margin-top:12px;">Etiqueta (opcional)</label>
+      <input type="text" id="edge-label" placeholder="Ej: Requiere aprobación previa" />
+    </div>
+    <div class="freeform-actions">
+      <button class="btn-cancel" onclick="cancelEdgeCreation()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmEdgeCreation()">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CONTEXT MENU (NODE) ============ -->
+<div class="ctx-menu" id="ctx-menu">
+  <div class="ctx-item" onclick="ctxAction('open-source')">🔗 Abrir origen</div>
+  <div class="ctx-item" onclick="ctxAction('edit-label')">✏️ Editar etiqueta</div>
+  <div class="ctx-divider"></div>
+  <div class="ctx-item danger" onclick="ctxAction('delete')">🗑️ Eliminar nodo</div>
+</div>
+
+<!-- ============ CONTEXT MENU (EDGE) ============ -->
+<div class="ctx-menu" id="ctx-edge-menu">
+  <div class="ctx-item" onclick="ctxEdgeAction('edit-label')">✏️ Editar etiqueta</div>
+  <div class="ctx-item" onclick="ctxEdgeAction('change-type')">↔ Cambiar tipo</div>
+  <div class="ctx-divider"></div>
+  <div class="ctx-item danger" onclick="ctxEdgeAction('delete')">🗑️ Eliminar conexión</div>
+</div>
+
+<!-- ============ TOAST ============ -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   CONFIG — same pattern as index.html
+   IMPORTANT: replace these with your actual Airtable values
+   (or load them from a shared config if you've already centralized that)
+===================================================================== */
+const AIRTABLE_API_KEY = 'pat8SF9w9X7yJCGyp.1ebcc53985c2bd9f8181d748623c3a4768f638da2d826840c6ed813e7e4bce4f';
+const AIRTABLE_BASE_ID = 'appMQxYmohtXSCvUn';
+
+const TBL_NODES      = 'GraphNodes';
+const TBL_EDGES      = 'GraphEdges';
+const TBL_ACTIVIDADES = 'Table 1';
+const TBL_COTIZACIONES = 'Cotizaciones';
+const TBL_CORTES      = 'Cortes';
+const TBL_AREAS       = 'Project Areas';
+
+// Date Semana 1 starts (YYYY-MM-DD, local time). Set this to the Monday
+// (or whichever day) when your project's first week begins. The graph will
+// auto-detect which Hito corresponds to "today" by parsing a number from
+// the hito's label (e.g. "Semana 3" -> 3) and comparing against the week
+// derived from this reference date.
+//
+// Anchor: Monday April 27, 2026 = Semana 6  (so Semana 1 started Mar 23, 2026).
+// Update this constant only if you decide to re-anchor the project timeline.
+const WEEK_1_START = '2026-03-23';
+
+const API_BASE = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`;
+const headers = {
+  'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+  'Content-Type': 'application/json'
+};
+
+/* =====================================================================
+   CURRENT-WEEK HELPERS
+   - currentWeekNumber(): integer week index based on WEEK_1_START.
+     Returns null if today is before WEEK_1_START.
+   - extractWeekNumber(label): pulls the first integer out of a hito label.
+     "Semana 3" -> 3, "Sem 12 - demo" -> 12, "Permits done" -> null.
+===================================================================== */
+function currentWeekNumber() {
+  const parts = WEEK_1_START.split('-');
+  if (parts.length !== 3) return null;
+  const start = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const now = new Date();
+  // Zero out time on `now` so we count whole days regardless of hour.
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffMs = today - start;
+  if (diffMs < 0) return null;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  return Math.floor(diffDays / 7) + 1;
+}
+
+function extractWeekNumber(label) {
+  if (!label) return null;
+  const m = String(label).match(/\d+/);
+  return m ? parseInt(m[0], 10) : null;
+}
+
+const CURRENT_WEEK = currentWeekNumber();
+
+/* =====================================================================
+   STATE
+===================================================================== */
+let nodes;             // vis DataSet
+let edges;             // vis DataSet
+let network;           // vis Network instance
+
+let allActividades = [];
+let allCotizaciones = [];
+let allCortes = [];
+let allAreas = [];
+
+// Track Airtable record IDs for nodes/edges already saved
+// Map: visNodeId -> airtableRecordId  (undefined = unsaved)
+const nodeAirtableId = new Map();
+const edgeAirtableId = new Map();
+
+// Track changes since last save
+const dirtyNodes = new Set();    // visNodeId of modified/created
+const dirtyEdges = new Set();    // visEdgeId of modified/created
+const deletedNodeAirtableIds = []; // airtable record IDs to DELETE
+const deletedEdgeAirtableIds = [];
+
+let pickerType = null;     // 'actividad' | 'cotizacion'
+let freeformType = null;   // 'milestone' | 'decision' | 'custom'
+let pendingEdge = null;    // {from, to, callback} during edge creation
+let ctxNodeId = null;      // node currently right-clicked
+let ctxEdgeId = null;      // edge currently right-clicked
+let edgeMode = false;
+
+/* =====================================================================
+   STYLE LOOKUPS
+===================================================================== */
+const SHAPE_BY_TYPE = {
+  actividad:  'box',
+  cotizacion: 'ellipse',
+  partida:    'triangle',
+  area:       'database',
+  milestone:  'star',
+  decision:   'diamond',
+  custom:     'hexagon'
+};
+
+// Colors by activity status (match index.html convention)
+const COLOR_BY_STATUS = {
+  '🔴': '#dc2626',
+  '🟡': '#f59e0b',
+  '🟢': '#10b981',
+  '🔵': '#3b82f6',
+  '〇': '#9ca3af'
+};
+
+// Default fill when no status applies
+const DEFAULT_COLOR_BY_TYPE = {
+  actividad:  '#9ca3af',  // overridden by status
+  cotizacion: '#10b981',
+  partida:    '#0891b2',  // teal — feels "structural / line-item"
+  area:       '#7c3aed',  // deep purple — top-level container
+  milestone:  '#f59e0b',
+  decision:   '#8b5cf6',
+  custom:     '#6b7280'
+};
+
+const EDGE_STYLE = {
+  depends_on: { color: '#374151', dashes: false, arrows: 'to' },
+  blocks:     { color: '#dc2626', dashes: false, arrows: 'to', width: 2.5 },
+  relates_to: { color: '#9ca3af', dashes: true,  arrows: '' },
+  feeds_into: { color: '#2563eb', dashes: false, arrows: 'to' }
+};
+
+/* =====================================================================
+   AIRTABLE FETCH HELPERS
+===================================================================== */
+async function airtableList(table, params = '') {
+  const url = `${API_BASE}/${encodeURIComponent(table)}${params ? '?' + params : ''}`;
+  const records = [];
+  let offset = null;
+  do {
+    const fullUrl = url + (offset ? (params ? '&' : '?') + 'offset=' + offset : '');
+    const r = await fetch(fullUrl, { headers });
+    if (!r.ok) throw new Error(`Fetch ${table} failed: ${r.status}`);
+    const data = await r.json();
+    records.push(...data.records);
+    offset = data.offset;
+  } while (offset);
+  return records;
+}
+
+async function airtableCreate(table, fields) {
+  const r = await fetch(`${API_BASE}/${encodeURIComponent(table)}`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ fields })
+  });
+  if (!r.ok) throw new Error(`Create ${table} failed: ${r.status} ${await r.text()}`);
+  return await r.json();
+}
+
+async function airtableUpdate(table, recordId, fields) {
+  const r = await fetch(`${API_BASE}/${encodeURIComponent(table)}/${recordId}`, {
+    method: 'PATCH', headers,
+    body: JSON.stringify({ fields })
+  });
+  if (!r.ok) throw new Error(`Update ${table} failed: ${r.status} ${await r.text()}`);
+  return await r.json();
+}
+
+async function airtableDelete(table, recordId) {
+  const r = await fetch(`${API_BASE}/${encodeURIComponent(table)}/${recordId}`, {
+    method: 'DELETE', headers
+  });
+  if (!r.ok) throw new Error(`Delete ${table} failed: ${r.status}`);
+}
+
+/* =====================================================================
+   NODE BUILDERS
+===================================================================== */
+function buildNodeFromActividad(rec, posX, posY) {
+  const f = rec.fields;
+  const status = f.Status || '〇';
+  const label = f.Task || f.Name || f.Actividad || f.Title || '(sin nombre)';
+  const alert = (f.Alert || '').trim();
+  return {
+    nodeType:        'actividad',
+    sourceTable:     TBL_ACTIVIDADES,
+    sourceRecordId:  rec.id,
+    label:           label,
+    posX, posY,
+    statusForDisplay: status,
+    alertText:        alert
+  };
+}
+
+function buildNodeFromCotizacion(rec, posX, posY) {
+  const f = rec.fields;
+  const label = f.Name || f.Title || f.Vendor || '(cotización)';
+  return {
+    nodeType:        'cotizacion',
+    sourceTable:     TBL_COTIZACIONES,
+    sourceRecordId:  rec.id,
+    label:           label,
+    posX, posY
+  };
+}
+
+function buildNodeFromCorte(rec, posX, posY) {
+  const f = rec.fields;
+  // Cortes (Partidas) — try common BOQ-style fields from our previous build
+  const item = f.item || f.CONCEPTO || f.descripcion || f.Name || '';
+  const ubic = f.UBICACION || '';
+  const label = ubic ? `${item} · ${ubic}` : (item || '(corte)');
+  return {
+    nodeType:        'partida',
+    sourceTable:     TBL_CORTES,
+    sourceRecordId:  rec.id,
+    label:           label.length > 60 ? label.slice(0, 57) + '…' : label,
+    posX, posY
+  };
+}
+
+function buildNodeFromArea(rec, posX, posY) {
+  const f = rec.fields;
+  const label = f.Name || f.Area || f.Title || f.UBICACION || '(área)';
+  return {
+    nodeType:        'area',
+    sourceTable:     TBL_AREAS,
+    sourceRecordId:  rec.id,
+    label:           label,
+    posX, posY
+  };
+}
+
+function visNodeFor(nodeData, visId) {
+  const shape = SHAPE_BY_TYPE[nodeData.nodeType] || 'box';
+  let bg, border;
+
+  if (nodeData.nodeType === 'actividad' && nodeData.statusForDisplay) {
+    bg = COLOR_BY_STATUS[nodeData.statusForDisplay] || DEFAULT_COLOR_BY_TYPE.actividad;
+  } else if (nodeData.color) {
+    bg = nodeData.color;
+  } else {
+    bg = DEFAULT_COLOR_BY_TYPE[nodeData.nodeType] || '#6b7280';
+  }
+  border = darken(bg, 25);
+
+  // Tooltip — for activities, show the Alert text if present
+  let title;
+  if (nodeData.nodeType === 'actividad' && nodeData.alertText) {
+    title = '⚠ Alerta: ' + nodeData.alertText;
+  }
+
+  // Current-week detection for milestones (hitos). If the label parses to a
+  // week number that matches the computed current week, scale the node up.
+  const isCurrentWeekHito =
+    nodeData.nodeType === 'milestone' &&
+    CURRENT_WEEK !== null &&
+    extractWeekNumber(nodeData.label) === CURRENT_WEEK;
+
+  // Sizes — default 22 for text-outside shapes, 38 if this is the current week hito.
+  const outsideSize = isCurrentWeekHito ? 38 : 22;
+  // Label font scales similarly so the bigger hito's label is also bigger.
+  const fontSize = isCurrentWeekHito ? 16 : 13;
+
+  return {
+    id: visId,
+    label: nodeData.label,
+    shape: shape,
+    title: title,
+    color: { background: bg, border: border, highlight: { background: bg, border: '#111' } },
+    font: {
+      color: isTextInsideShape(shape) ? '#fff' : '#1f2937',
+      face: '-apple-system, "Segoe UI", sans-serif',
+      size: fontSize,
+      bold: { color: isTextInsideShape(shape) ? '#fff' : '#1f2937' },
+      multi: false
+    },
+    x: nodeData.posX,
+    y: nodeData.posY,
+    margin: 10,
+    // Uniform sizing for text-inside shapes — same width regardless of label length.
+    // Text-outside shapes (triangle, star, diamond, hexagon) use the `size` property.
+    // The current-week hito uses an enlarged size so it visibly stands out.
+    widthConstraint:  isTextInsideShape(shape) ? { minimum: 140, maximum: 140 } : undefined,
+    heightConstraint: isTextInsideShape(shape) ? { minimum: 44 } : undefined,
+    size: isTextInsideShape(shape) ? undefined : outsideSize,
+    _data: nodeData     // attach for later access
+  };
+}
+
+// vis-network shapes that render their label INSIDE the shape (and therefore
+// auto-size to fit the text). The other shapes show the label below.
+function isTextInsideShape(shape) {
+  return ['box', 'ellipse', 'circle', 'database'].includes(shape);
+}
+
+function darken(hex, pct) {
+  const h = hex.replace('#','');
+  const r = Math.max(0, parseInt(h.substring(0,2),16) - pct);
+  const g = Math.max(0, parseInt(h.substring(2,4),16) - pct);
+  const b = Math.max(0, parseInt(h.substring(4,6),16) - pct);
+  return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0')).join('');
+}
+
+/* =====================================================================
+   pArea LINKED-RECORD HELPERS
+   pArea is a Linked Record field pointing to Project Areas. Airtable
+   returns it as an array of record IDs (e.g. ['recXXX']). To display
+   the human-readable area name we resolve against the allAreas cache.
+===================================================================== */
+function pAreaIds(val) {
+  if (!val) return [];
+  const arr = Array.isArray(val) ? val : [val];
+  return arr.map(v => (typeof v === 'object' && v !== null ? v.id : v)).filter(Boolean);
+}
+
+function pAreaNames(val) {
+  return pAreaIds(val).map(id => {
+    const found = allAreas.find(a => a.id === id);
+    return found ? (found.fields.Name || '') : '';
+  }).filter(Boolean);
+}
+
+function pAreaPrimaryId(val) {
+  const ids = pAreaIds(val);
+  return ids[0] || '';
+}
+
+function pAreaPrimaryName(val) {
+  const names = pAreaNames(val);
+  return names[0] || '';
+}
+
+// Returns the Order field from Project Areas for sorting; missing -> very high
+function areaOrder(areaId) {
+  const a = allAreas.find(x => x.id === areaId);
+  return a && a.fields && (a.fields.Order ?? a.fields.order) != null
+    ? Number(a.fields.Order ?? a.fields.order)
+    : 9999;
+}
+
+/* =====================================================================
+   STATUS ICON & ALERT BADGE — drawn directly on canvas as overlays
+   These mirror the SVG status icons used in the main Actividades app:
+   filled colored circle with a white symbol inside (stop/pause/play/check)
+   plus the dashed circle with × for deprecated.
+   Coordinates passed in are TOP-RIGHT corner for status, TOP-LEFT for alert.
+===================================================================== */
+function drawStatusIcon(ctx, status, rightX, topY, size) {
+  // We anchor at top-right and draw leftward so the icon sits at the
+  // node's outer edge regardless of size variation.
+  const r = size / 2;
+  const cx = rightX - r;
+  const cy = topY + r;
+
+  ctx.save();
+
+  if (status === '〇') {
+    // Deprecated — dashed gray circle with gray ×
+    ctx.strokeStyle = '#9ca3af';
+    ctx.lineWidth = 1.5;
+    ctx.fillStyle = '#fafbfc';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r - 0.5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // ×
+    const xPad = size * 0.30;
+    ctx.strokeStyle = '#6b7280';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - r + xPad, cy - r + xPad);
+    ctx.lineTo(cx + r - xPad, cy + r - xPad);
+    ctx.moveTo(cx + r - xPad, cy - r + xPad);
+    ctx.lineTo(cx - r + xPad, cy + r - xPad);
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+
+  // Filled circle background by status color
+  const bg = COLOR_BY_STATUS[status] || '#9ca3af';
+  ctx.fillStyle = bg;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Inner symbol — always white
+  ctx.fillStyle = '#fff';
+
+  if (status === '🔴') {
+    // Stop square
+    const sq = size * 0.42;
+    ctx.fillRect(cx - sq/2, cy - sq/2, sq, sq);
+  } else if (status === '🟡') {
+    // Pause — two bars
+    const bw = size * 0.13;
+    const bh = size * 0.44;
+    const gap = size * 0.12;
+    ctx.fillRect(cx - gap/2 - bw, cy - bh/2, bw, bh);
+    ctx.fillRect(cx + gap/2,      cy - bh/2, bw, bh);
+  } else if (status === '🟢') {
+    // Play — equilateral triangle pointing right
+    const th = size * 0.46;
+    const tw = th * 0.866;
+    const tx = cx - tw/2 + size * 0.04;
+    const ty = cy - th/2;
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(tx, ty + th);
+    ctx.lineTo(tx + tw, ty + th/2);
+    ctx.closePath();
+    ctx.fill();
+  } else if (status === '🔵') {
+    // Checkmark
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.22, cy + size * 0.02);
+    ctx.lineTo(cx - size * 0.05, cy + size * 0.20);
+    ctx.lineTo(cx + size * 0.24, cy - size * 0.18);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawAlertBadge(ctx, leftX, topY, size) {
+  // Yellow warning triangle with white "!" inside.
+  // Anchor at top-left and draw rightward.
+  const r = size / 2;
+  const cx = leftX + r;
+  const cy = topY + r;
+
+  ctx.save();
+
+  // Soft white halo so the badge stands out on any node color
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + 1, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Triangle
+  const th = size * 0.78;
+  const tw = th * 1.05;
+  const tx = cx - tw/2;
+  const ty = cy - th/2 + 1;
+  ctx.fillStyle = '#f59e0b';
+  ctx.strokeStyle = '#92400e';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(tx + tw/2, ty);
+  ctx.lineTo(tx + tw, ty + th);
+  ctx.lineTo(tx, ty + th);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Exclamation mark
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${Math.round(size * 0.6)}px -apple-system, "Segoe UI", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('!', cx, cy + 1);
+
+  ctx.restore();
+}
+
+/* =====================================================================
+   INIT
+===================================================================== */
+async function init() {
+  showLoading(true);
+  try {
+    // Pre-fetch all source tables for the pickers
+    const [acts, cots, cortes, areas] = await Promise.all([
+      airtableList(TBL_ACTIVIDADES).catch(() => []),
+      airtableList(TBL_COTIZACIONES).catch(() => []),
+      airtableList(TBL_CORTES).catch(() => []),
+      airtableList(TBL_AREAS).catch(() => [])
+    ]);
+    allActividades = acts;
+    allCotizaciones = cots;
+    allCortes = cortes;
+    allAreas = areas;
+
+    // Fetch saved nodes and edges
+    const [savedNodes, savedEdges] = await Promise.all([
+      airtableList(TBL_NODES).catch((e) => { console.warn('GraphNodes empty/missing:', e); return []; }),
+      airtableList(TBL_EDGES).catch((e) => { console.warn('GraphEdges empty/missing:', e); return []; })
+    ]);
+
+    // Build vis DataSets
+    nodes = new vis.DataSet();
+    edges = new vis.DataSet();
+
+    let visIdCounter = 1;
+    const recIdToVisId = new Map();  // GraphNodes record id -> our visId
+
+    for (const rec of savedNodes) {
+      const f = rec.fields;
+      const visId = `n${visIdCounter++}`;
+      const nodeData = {
+        nodeType:       f.nodeType || 'custom',
+        sourceTable:    f.sourceTable || '',
+        sourceRecordId: f.sourceRecordId || '',
+        label:          f.label || '(sin etiqueta)',
+        posX:           f.posX ?? 0,
+        posY:           f.posY ?? 0,
+        color:          f.color || '',
+        notes:          f.notes || ''
+      };
+
+      // For activities, fetch fresh status from Actividades
+      if (nodeData.sourceTable === TBL_ACTIVIDADES && nodeData.sourceRecordId) {
+        const act = allActividades.find(a => a.id === nodeData.sourceRecordId);
+        if (act) {
+          nodeData.statusForDisplay = act.fields.Status || '〇';
+          nodeData.label = act.fields.Task || act.fields.Name || act.fields.Actividad || nodeData.label;
+          nodeData.alertText = (act.fields.Alert || '').trim();
+        }
+      } else if (nodeData.sourceTable === TBL_COTIZACIONES && nodeData.sourceRecordId) {
+        const cot = allCotizaciones.find(c => c.id === nodeData.sourceRecordId);
+        if (cot) {
+          nodeData.label = cot.fields.Name || cot.fields.Title || nodeData.label;
+        }
+      } else if (nodeData.sourceTable === TBL_CORTES && nodeData.sourceRecordId) {
+        const corte = allCortes.find(c => c.id === nodeData.sourceRecordId);
+        if (corte) {
+          const f = corte.fields;
+          const item = f.item || f.CONCEPTO || f.descripcion || f.Name || '';
+          const ubic = f.UBICACION || '';
+          const fresh = ubic ? `${item} · ${ubic}` : (item || nodeData.label);
+          nodeData.label = fresh.length > 60 ? fresh.slice(0, 57) + '…' : fresh;
+        }
+      } else if (nodeData.sourceTable === TBL_AREAS && nodeData.sourceRecordId) {
+        const area = allAreas.find(a => a.id === nodeData.sourceRecordId);
+        if (area) {
+          const f = area.fields;
+          nodeData.label = f.Name || f.Area || f.Title || f.UBICACION || nodeData.label;
+        }
+      }
+
+      nodes.add(visNodeFor(nodeData, visId));
+      nodeAirtableId.set(visId, rec.id);
+      recIdToVisId.set(rec.id, visId);
+    }
+
+    let visEdgeCounter = 1;
+    for (const rec of savedEdges) {
+      const f = rec.fields;
+      const fromRecId = (f.fromNode && f.fromNode[0]) || null;
+      const toRecId   = (f.toNode && f.toNode[0]) || null;
+      if (!fromRecId || !toRecId) continue;
+      const fromVisId = recIdToVisId.get(fromRecId);
+      const toVisId   = recIdToVisId.get(toRecId);
+      if (!fromVisId || !toVisId) continue;
+
+      const edgeType = f.edgeType || 'depends_on';
+      const style = EDGE_STYLE[edgeType] || EDGE_STYLE.depends_on;
+      const visEdgeId = `e${visEdgeCounter++}`;
+      edges.add({
+        id: visEdgeId,
+        from: fromVisId,
+        to: toVisId,
+        label: f.label || '',
+        arrows: style.arrows,
+        dashes: style.dashes,
+        color: { color: style.color },
+        width: style.width || 1.5,
+        font: { size: 11, color: '#4b5563', strokeWidth: 3, strokeColor: '#fafbfc' },
+        _data: { edgeType, label: f.label || '' }
+      });
+      edgeAirtableId.set(visEdgeId, rec.id);
+    }
+
+    // Build the network
+    const container = document.getElementById('network');
+    const data = { nodes, edges };
+    const options = {
+      physics: { enabled: false },
+      interaction: {
+        dragNodes: true,
+        dragView: true,
+        zoomView: true,
+        multiselect: false,
+        hover: true,
+        tooltipDelay: 200
+      },
+      manipulation: {
+        enabled: false,    // we drive this manually via toolbar
+        addEdge: function(edgeData, callback) {
+          if (edgeData.from === edgeData.to) {
+            callback(null);
+            return;
+          }
+          pendingEdge = { ...edgeData, callback };
+          openEdgeModal();
+        }
+      },
+      nodes: {
+        borderWidth: 2,
+        shadow: { enabled: true, color: 'rgba(0,0,0,0.1)', size: 6, x: 0, y: 2 }
+      },
+      edges: {
+        smooth: { type: 'cubicBezier', forceDirection: 'horizontal', roundness: 0.4 }
+      }
+    };
+    network = new vis.Network(container, data, options);
+
+    // Track drag-end as a position change
+    network.on('dragEnd', (params) => {
+      if (params.nodes && params.nodes.length) {
+        const positions = network.getPositions(params.nodes);
+        for (const visId of params.nodes) {
+          const node = nodes.get(visId);
+          if (!node) continue;
+          node._data.posX = positions[visId].x;
+          node._data.posY = positions[visId].y;
+          markNodeDirty(visId);
+        }
+      }
+    });
+
+    // Paint corner overlays on every render: status icon (top-right) and
+    // alert badge (top-left) for activity nodes that have those fields.
+    network.on('afterDrawing', (ctx) => {
+      nodes.forEach((node) => {
+        if (!node._data || node._data.nodeType !== 'actividad') return;
+        const bbox = network.getBoundingBox(node.id);
+        if (!bbox) return;
+
+        // Status icon — top-right corner
+        if (node._data.statusForDisplay) {
+          drawStatusIcon(ctx, node._data.statusForDisplay, bbox.right - 6, bbox.top + 6, 16);
+        }
+
+        // Alert badge — top-left corner
+        if (node._data.alertText) {
+          drawAlertBadge(ctx, bbox.left + 6, bbox.top + 6, 16);
+        }
+      });
+    });
+
+    // Right-click / long-press for context menu — checks node first, then edge
+    network.on('oncontext', (params) => {
+      params.event.preventDefault();
+      const nodeId = network.getNodeAt(params.pointer.DOM);
+      if (nodeId) {
+        ctxNodeId = nodeId;
+        ctxEdgeId = null;
+        showNodeContextMenu(params.event.clientX, params.event.clientY);
+        return;
+      }
+      const edgeId = network.getEdgeAt(params.pointer.DOM);
+      if (edgeId) {
+        ctxEdgeId = edgeId;
+        ctxNodeId = null;
+        showEdgeContextMenu(params.event.clientX, params.event.clientY);
+      }
+    });
+
+    // Hide context menu on any other click
+    document.addEventListener('click', hideContextMenu);
+
+    updateEmptyState();
+    updateSaveStatus();
+    updateWeekPill();
+  } catch (err) {
+    console.error(err);
+    showToast('Error al cargar: ' + err.message, 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+/* =====================================================================
+   ADD NODES — pickers and free-form
+===================================================================== */
+function openPicker(type) {
+  pickerType = type;
+  const titles = {
+    actividad:  'Añadir Actividad',
+    cotizacion: 'Añadir Cotización',
+    partida:    'Añadir Corte',
+    area:       'Añadir Área'
+  };
+  document.getElementById('picker-title').textContent = titles[type] || 'Seleccionar';
+  document.getElementById('picker-search').value = '';
+  renderPicker('');
+  document.getElementById('picker-modal').classList.add('show');
+  setTimeout(() => document.getElementById('picker-search').focus(), 50);
+}
+
+function closePicker() {
+  document.getElementById('picker-modal').classList.remove('show');
+  pickerType = null;
+}
+
+function filterPicker() {
+  const q = document.getElementById('picker-search').value.toLowerCase();
+  renderPicker(q);
+}
+
+function renderPicker(query) {
+  const body = document.getElementById('picker-body');
+
+  let list;
+  if (pickerType === 'actividad')      list = allActividades;
+  else if (pickerType === 'cotizacion') list = allCotizaciones;
+  else if (pickerType === 'partida')    list = allCortes;
+  else if (pickerType === 'area')       list = allAreas;
+  else list = [];
+
+  // Determine which sourceRecordIds are already on the canvas
+  const onCanvas = new Set();
+  nodes.forEach(n => {
+    if (n._data && n._data.sourceRecordId) onCanvas.add(n._data.sourceRecordId);
+  });
+
+  const items = list.map(rec => {
+    const f = rec.fields;
+    let name = '', meta = '', status = '';
+
+    if (pickerType === 'actividad') {
+      name = f.Task || f.Name || f.Actividad || f.Title || '(sin nombre)';
+      status = f.Status || '〇';
+      meta = pAreaPrimaryName(f.pArea) || f.Area || f.UBICACION || '';
+    } else if (pickerType === 'cotizacion') {
+      name = f.Name || f.Title || f.Vendor || '(cotización)';
+      status = f.Status || '';
+      const amt = f.Amount ? new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(f.Amount) : '';
+      const grp = (f.Group || '').trim();
+      meta = [grp, amt].filter(Boolean).join(' · ');
+    } else if (pickerType === 'partida') {
+      const item = f.item || f.CONCEPTO || f.descripcion || f.Name || '';
+      name = item || '(corte)';
+      const ubic = f.UBICACION || '';
+      const type = f.type || '';
+      meta = [ubic, type].filter(Boolean).join(' · ');
+    } else if (pickerType === 'area') {
+      name = f.Name || f.Area || f.Title || f.UBICACION || '(área)';
+      meta = '';
+    }
+
+    return { rec, name, status, meta, alreadyOnCanvas: onCanvas.has(rec.id) };
+  }).filter(it => !query || it.name.toLowerCase().includes(query) || it.meta.toLowerCase().includes(query));
+
+  if (!items.length) {
+    body.innerHTML = '<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;">Sin resultados</div>';
+    return;
+  }
+
+  // For Actividades: group by pArea (in Project Areas Order), sort by createdTime asc within each group.
+  // For Cotizaciones: group by Group field (free text — HVAC, GAS, etc.), sort by createdTime within each.
+  // For all other pickers: render flat.
+  if (pickerType === 'actividad') {
+    body.innerHTML = renderActivityPickerGrouped(items);
+  } else if (pickerType === 'cotizacion') {
+    body.innerHTML = renderCotizPickerGrouped(items);
+  } else {
+    body.innerHTML = items.map(renderPickerRow).join('');
+  }
+}
+
+function renderPickerRow(it) {
+  // Status indicator: prefer the actual emoji (matches main app's list style for both
+  // Actividades and Cotizaciones), fall back to a colored dot if the value isn't a known emoji.
+  let statusHtml = '<span class="picker-item-status-spacer"></span>';
+  if (it.status) {
+    const knownEmoji = ['🔴','🟡','🟢','🔵','〇'].includes(it.status);
+    if (knownEmoji) {
+      statusHtml = `<span class="picker-item-status-emoji">${it.status}</span>`;
+    } else {
+      statusHtml = `<span class="picker-item-status" style="background:${COLOR_BY_STATUS[it.status] || '#9ca3af'}"></span>`;
+    }
+  }
+  return `
+    <div class="picker-item ${it.alreadyOnCanvas ? 'disabled' : ''}"
+         ${!it.alreadyOnCanvas ? `onclick="addFromPicker('${it.rec.id}')"` : ''}>
+      ${statusHtml}
+      <div class="picker-item-text">
+        <div class="picker-item-name">${escapeHtml(it.name)}</div>
+        ${it.meta ? `<div class="picker-item-meta">${escapeHtml(it.meta)}</div>` : ''}
+      </div>
+      ${it.alreadyOnCanvas ? '<span class="picker-item-added">en grafo</span>' : ''}
+    </div>
+  `;
+}
+
+function renderActivityPickerGrouped(items) {
+  // Bucket by pArea record ID (or '' for unassigned)
+  const buckets = new Map();   // areaId -> { name, order, items: [] }
+
+  // Pre-seed all areas in their declared Order so empty groups still appear
+  // in the right relative order if any item drops in later.
+  const areasSorted = [...allAreas].sort((a, b) => {
+    const oa = (a.fields.Order ?? a.fields.order ?? 9999);
+    const ob = (b.fields.Order ?? b.fields.order ?? 9999);
+    return oa - ob || (a.fields.Name || '').localeCompare(b.fields.Name || '');
+  });
+  for (const a of areasSorted) {
+    buckets.set(a.id, {
+      name: a.fields.Name || '(sin nombre)',
+      order: Number(a.fields.Order ?? a.fields.order ?? 9999),
+      items: []
+    });
+  }
+
+  // Drop each item into its bucket
+  for (const it of items) {
+    const f = it.rec.fields;
+    const ids = pAreaIds(f.pArea);
+    const areaId = ids[0] || '__no_area__';
+    if (!buckets.has(areaId)) {
+      buckets.set(areaId, {
+        name: areaId === '__no_area__' ? 'Sin área' : '(área desconocida)',
+        order: 99999,   // unassigned sinks to the bottom
+        items: []
+      });
+    }
+    buckets.get(areaId).items.push(it);
+  }
+
+  // Sort within each bucket by createdTime ascending (matches main app's "line number")
+  for (const b of buckets.values()) {
+    b.items.sort((x, y) => {
+      const tx = x.rec.createdTime || '';
+      const ty = y.rec.createdTime || '';
+      return tx.localeCompare(ty);
+    });
+  }
+
+  // Drop empty buckets, then emit grouped HTML
+  const groups = [...buckets.values()]
+    .filter(b => b.items.length > 0)
+    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+
+  return groups.map(g => `
+    <div class="picker-group-header">
+      <span class="picker-group-name">${escapeHtml(g.name)}</span>
+      <span class="picker-group-count">${g.items.length}</span>
+    </div>
+    ${g.items.map(renderPickerRow).join('')}
+  `).join('');
+}
+
+function renderCotizPickerGrouped(items) {
+  // Bucket by Group (free-text field — HVAC, GAS, Estructura, Mobiliario, etc.)
+  // Empty/missing Group goes to "Sin grupo" which sorts to the end.
+  const buckets = new Map();   // groupName -> items[]
+  for (const it of items) {
+    const g = (it.rec.fields.Group || '').trim();
+    const key = g || '__no_group__';
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(it);
+  }
+
+  // Sort within each bucket by createdTime ascending (oldest first — same as Actividades)
+  for (const arr of buckets.values()) {
+    arr.sort((x, y) => {
+      const tx = x.rec.createdTime || '';
+      const ty = y.rec.createdTime || '';
+      return tx.localeCompare(ty);
+    });
+  }
+
+  // Order groups: alphabetical, with "Sin grupo" forced to the bottom
+  const groups = [...buckets.entries()]
+    .map(([key, arr]) => ({
+      key,
+      name: key === '__no_group__' ? 'Sin grupo' : key,
+      sortKey: key === '__no_group__' ? '\uFFFF' : key.toLowerCase(),
+      items: arr
+    }))
+    .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
+  return groups.map(g => `
+    <div class="picker-group-header">
+      <span class="picker-group-name">${escapeHtml(g.name)}</span>
+      <span class="picker-group-count">${g.items.length}</span>
+    </div>
+    ${g.items.map(renderPickerRow).join('')}
+  `).join('');
+}
+
+function addFromPicker(recordId) {
+  let list, builder;
+  if (pickerType === 'actividad')      { list = allActividades; builder = buildNodeFromActividad; }
+  else if (pickerType === 'cotizacion'){ list = allCotizaciones; builder = buildNodeFromCotizacion; }
+  else if (pickerType === 'partida')   { list = allCortes;       builder = buildNodeFromCorte; }
+  else if (pickerType === 'area')      { list = allAreas;        builder = buildNodeFromArea; }
+  else return;
+
+  const rec = list.find(r => r.id === recordId);
+  if (!rec) return;
+
+  // Place at center of viewport
+  const center = network.getViewPosition();
+  const offset = (Math.random() - 0.5) * 100;
+  const posX = center.x + offset;
+  const posY = center.y + offset;
+
+  const nodeData = builder(rec, posX, posY);
+
+  const visId = `nlocal_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+  nodes.add(visNodeFor(nodeData, visId));
+  markNodeDirty(visId);
+  closePicker();
+  updateEmptyState();
+  showToast(`Añadido: ${nodeData.label}`, 'success');
+}
+
+function openFreeform(type) {
+  freeformType = type;
+  const titles = {
+    milestone: 'Nuevo Hito',
+    decision:  'Nueva Decisión',
+    custom:    'Nuevo Nodo Personalizado'
+  };
+  document.getElementById('freeform-title').textContent = titles[type];
+  document.getElementById('freeform-label').value = '';
+  document.getElementById('freeform-notes').value = '';
+  document.getElementById('freeform-modal').classList.add('show');
+  setTimeout(() => document.getElementById('freeform-label').focus(), 50);
+}
+
+function closeFreeform() {
+  document.getElementById('freeform-modal').classList.remove('show');
+  freeformType = null;
+}
+
+function confirmFreeform() {
+  const label = document.getElementById('freeform-label').value.trim();
+  if (!label) { showToast('Etiqueta requerida', 'error'); return; }
+  const notes = document.getElementById('freeform-notes').value.trim();
+
+  const center = network.getViewPosition();
+  const offset = (Math.random() - 0.5) * 80;
+
+  const nodeData = {
+    nodeType:       freeformType,
+    sourceTable:    '',
+    sourceRecordId: '',
+    label:          label,
+    posX:           center.x + offset,
+    posY:           center.y + offset,
+    color:          '',
+    notes:          notes
+  };
+
+  const visId = `nlocal_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+  nodes.add(visNodeFor(nodeData, visId));
+  markNodeDirty(visId);
+  closeFreeform();
+  updateEmptyState();
+  showToast(`Añadido: ${label}`, 'success');
+}
+
+/* =====================================================================
+   EDGE CREATION
+===================================================================== */
+function toggleEdgeMode() {
+  edgeMode = !edgeMode;
+  const btn = document.getElementById('edge-mode-btn');
+  if (edgeMode) {
+    network.addEdgeMode();
+    btn.style.background = '#111827';
+    btn.style.color = '#fff';
+    showToast('Arrastra de un nodo a otro para conectar', 'success');
+  } else {
+    network.disableEditMode();
+    btn.style.background = '';
+    btn.style.color = '';
+  }
+}
+
+function openEdgeModal() {
+  document.getElementById('edge-type-select').value = 'depends_on';
+  document.getElementById('edge-label').value = '';
+  document.getElementById('edge-modal').classList.add('show');
+}
+
+function closeEdgeModal() {
+  document.getElementById('edge-modal').classList.remove('show');
+}
+
+function cancelEdgeCreation() {
+  if (pendingEdge && pendingEdge.callback) pendingEdge.callback(null);
+  pendingEdge = null;
+  closeEdgeModal();
+  // Stay in edge mode for further edges if user wants
+  if (edgeMode) network.addEdgeMode();
+}
+
+function confirmEdgeCreation() {
+  if (!pendingEdge) return;
+  const edgeType = document.getElementById('edge-type-select').value;
+  const label = document.getElementById('edge-label').value.trim();
+  const style = EDGE_STYLE[edgeType] || EDGE_STYLE.depends_on;
+
+  const visEdgeId = `elocal_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+  const newEdge = {
+    id: visEdgeId,
+    from: pendingEdge.from,
+    to: pendingEdge.to,
+    label: label,
+    arrows: style.arrows,
+    dashes: style.dashes,
+    color: { color: style.color },
+    width: style.width || 1.5,
+    font: { size: 11, color: '#4b5563', strokeWidth: 3, strokeColor: '#fafbfc' },
+    _data: { edgeType, label }
+  };
+  // Don't use the manipulation callback (it adds with vis-generated id) — add manually
+  if (pendingEdge.callback) pendingEdge.callback(null);
+  edges.add(newEdge);
+  markEdgeDirty(visEdgeId);
+
+  pendingEdge = null;
+  closeEdgeModal();
+  if (edgeMode) network.addEdgeMode();
+}
+
+/* =====================================================================
+   CONTEXT MENU — separate menus for nodes and edges
+===================================================================== */
+function showNodeContextMenu(x, y) {
+  hideContextMenu();   // belt-and-suspenders: ensure edge menu is closed
+  const menu = document.getElementById('ctx-menu');
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  menu.classList.add('show');
+
+  // Hide "open source" if no source link
+  const node = nodes.get(ctxNodeId);
+  const hasSource = node && node._data && node._data.sourceRecordId;
+  menu.children[0].style.display = hasSource ? 'flex' : 'none';
+}
+
+function showEdgeContextMenu(x, y) {
+  hideContextMenu();   // ensure node menu is closed
+  const menu = document.getElementById('ctx-edge-menu');
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  menu.classList.add('show');
+}
+
+function hideContextMenu() {
+  document.getElementById('ctx-menu').classList.remove('show');
+  const em = document.getElementById('ctx-edge-menu');
+  if (em) em.classList.remove('show');
+}
+
+function ctxAction(action) {
+  if (!ctxNodeId) return;
+  const node = nodes.get(ctxNodeId);
+  hideContextMenu();
+
+  if (action === 'open-source' && node._data.sourceRecordId) {
+    const url = `https://airtable.com/${AIRTABLE_BASE_ID}/${encodeURIComponent(node._data.sourceTable)}/${node._data.sourceRecordId}`;
+    window.open(url, '_blank');
+  } else if (action === 'edit-label') {
+    const newLabel = prompt('Nueva etiqueta:', node.label);
+    if (newLabel && newLabel.trim()) {
+      node._data.label = newLabel.trim();
+      // Rebuild via visNodeFor so size/font update for hitos crossing the
+      // current-week threshold. Preserve the position from the live node.
+      const positions = network.getPositions([ctxNodeId]);
+      if (positions[ctxNodeId]) {
+        node._data.posX = positions[ctxNodeId].x;
+        node._data.posY = positions[ctxNodeId].y;
+      }
+      const rebuilt = visNodeFor(node._data, ctxNodeId);
+      nodes.update(rebuilt);
+      markNodeDirty(ctxNodeId);
+    }
+  } else if (action === 'delete') {
+    if (!confirm(`¿Eliminar "${node.label}"?\n(Las conexiones a este nodo también se eliminarán)`)) return;
+
+    // Mark connected edges for deletion
+    const connectedEdgeIds = network.getConnectedEdges(ctxNodeId);
+    for (const eid of connectedEdgeIds) {
+      const airId = edgeAirtableId.get(eid);
+      if (airId) deletedEdgeAirtableIds.push(airId);
+      edges.remove(eid);
+      edgeAirtableId.delete(eid);
+      dirtyEdges.delete(eid);
+    }
+
+    // Mark the node for deletion
+    const airId = nodeAirtableId.get(ctxNodeId);
+    if (airId) deletedNodeAirtableIds.push(airId);
+    nodes.remove(ctxNodeId);
+    nodeAirtableId.delete(ctxNodeId);
+    dirtyNodes.delete(ctxNodeId);
+
+    updateEmptyState();
+    updateSaveStatus();
+    showToast('Nodo eliminado', 'success');
+  }
+  ctxNodeId = null;
+}
+
+function ctxEdgeAction(action) {
+  if (!ctxEdgeId) return;
+  const edge = edges.get(ctxEdgeId);
+  hideContextMenu();
+
+  if (!edge) { ctxEdgeId = null; return; }
+
+  if (action === 'delete') {
+    // No confirmation — matches user's preference for fast deletion.
+    // The actual Airtable DELETE happens on next Save.
+    const airId = edgeAirtableId.get(ctxEdgeId);
+    if (airId) deletedEdgeAirtableIds.push(airId);
+    edges.remove(ctxEdgeId);
+    edgeAirtableId.delete(ctxEdgeId);
+    dirtyEdges.delete(ctxEdgeId);
+    updateSaveStatus();
+    showToast('Conexión eliminada', 'success');
+  } else if (action === 'edit-label') {
+    const current = (edge._data && edge._data.label) || edge.label || '';
+    const newLabel = prompt('Etiqueta de la conexión:', current);
+    if (newLabel === null) { ctxEdgeId = null; return; }   // cancelled
+    const trimmed = newLabel.trim();
+    edge._data = edge._data || {};
+    edge._data.label = trimmed;
+    edges.update({ id: ctxEdgeId, label: trimmed, _data: edge._data });
+    markEdgeDirty(ctxEdgeId);
+  } else if (action === 'change-type') {
+    const types = ['depends_on', 'blocks', 'relates_to', 'feeds_into'];
+    const labels = {
+      depends_on: 'Depende de (→)',
+      blocks:     'Bloquea a (⊗)',
+      relates_to: 'Se relaciona con (--)',
+      feeds_into: 'Alimenta a (⇒)'
+    };
+    const current = (edge._data && edge._data.edgeType) || 'depends_on';
+    const choice = prompt(
+      'Cambiar tipo de conexión a uno de:\n' +
+      types.map(t => `  ${t === current ? '*' : ' '} ${t} — ${labels[t]}`).join('\n') +
+      '\n\n(Escribe exactamente: depends_on, blocks, relates_to o feeds_into)',
+      current
+    );
+    if (choice === null) { ctxEdgeId = null; return; }
+    const newType = choice.trim();
+    if (!types.includes(newType)) {
+      showToast('Tipo no válido', 'error');
+      ctxEdgeId = null;
+      return;
+    }
+    const style = EDGE_STYLE[newType];
+    edge._data = edge._data || {};
+    edge._data.edgeType = newType;
+    edges.update({
+      id: ctxEdgeId,
+      arrows: style.arrows,
+      dashes: style.dashes,
+      color: { color: style.color },
+      width: style.width || 1.5,
+      _data: edge._data
+    });
+    markEdgeDirty(ctxEdgeId);
+  }
+
+  ctxEdgeId = null;
+}
+
+/* =====================================================================
+   DIRTY TRACKING
+===================================================================== */
+function markNodeDirty(visId) {
+  dirtyNodes.add(visId);
+  updateSaveStatus();
+}
+function markEdgeDirty(visEdgeId) {
+  dirtyEdges.add(visEdgeId);
+  updateSaveStatus();
+}
+
+function isDirty() {
+  return dirtyNodes.size > 0
+      || dirtyEdges.size > 0
+      || deletedNodeAirtableIds.length > 0
+      || deletedEdgeAirtableIds.length > 0;
+}
+
+function updateSaveStatus() {
+  const btn = document.getElementById('save-btn');
+  const status = document.getElementById('saved-status');
+  if (isDirty()) {
+    btn.classList.add('dirty');
+    status.classList.add('dirty');
+    const count = dirtyNodes.size + dirtyEdges.size + deletedNodeAirtableIds.length + deletedEdgeAirtableIds.length;
+    status.textContent = `${count} cambio${count===1?'':'s'} sin guardar`;
+  } else {
+    btn.classList.remove('dirty');
+    status.classList.remove('dirty');
+    status.textContent = 'Sin cambios';
+  }
+}
+
+/* =====================================================================
+   SAVE
+===================================================================== */
+async function saveLayout() {
+  if (!isDirty()) {
+    showToast('No hay cambios para guardar');
+    return;
+  }
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+
+  try {
+    // 1. Delete edges first (FK-safe)
+    for (const id of deletedEdgeAirtableIds.slice()) {
+      await airtableDelete(TBL_EDGES, id);
+    }
+    deletedEdgeAirtableIds.length = 0;
+
+    // 2. Delete nodes
+    for (const id of deletedNodeAirtableIds.slice()) {
+      await airtableDelete(TBL_NODES, id);
+    }
+    deletedNodeAirtableIds.length = 0;
+
+    // 3. Create/update nodes — must do all nodes BEFORE edges that reference them
+    const dirtyNodeList = Array.from(dirtyNodes);
+    for (const visId of dirtyNodeList) {
+      const node = nodes.get(visId);
+      if (!node) continue;
+      const fields = {
+        nodeType:       node._data.nodeType,
+        sourceTable:    node._data.sourceTable || '',
+        sourceRecordId: node._data.sourceRecordId || '',
+        label:          node._data.label,
+        posX:           Math.round(node._data.posX * 100) / 100,
+        posY:           Math.round(node._data.posY * 100) / 100,
+        color:          node._data.color || '',
+        notes:          node._data.notes || ''
+      };
+      const existingAirId = nodeAirtableId.get(visId);
+      if (existingAirId) {
+        await airtableUpdate(TBL_NODES, existingAirId, fields);
+      } else {
+        const created = await airtableCreate(TBL_NODES, fields);
+        nodeAirtableId.set(visId, created.id);
+      }
+      dirtyNodes.delete(visId);
+    }
+
+    // 4. Create/update edges (now all referenced nodes have Airtable IDs)
+    const dirtyEdgeList = Array.from(dirtyEdges);
+    for (const visEdgeId of dirtyEdgeList) {
+      const edge = edges.get(visEdgeId);
+      if (!edge) continue;
+      const fromAirId = nodeAirtableId.get(edge.from);
+      const toAirId = nodeAirtableId.get(edge.to);
+      if (!fromAirId || !toAirId) {
+        console.warn('Skipping edge with unsaved nodes:', visEdgeId);
+        continue;
+      }
+      const fields = {
+        fromNode: [fromAirId],
+        toNode:   [toAirId],
+        edgeType: edge._data.edgeType || 'depends_on',
+        label:    edge._data.label || ''
+      };
+      const existingAirId = edgeAirtableId.get(visEdgeId);
+      if (existingAirId) {
+        await airtableUpdate(TBL_EDGES, existingAirId, fields);
+      } else {
+        const created = await airtableCreate(TBL_EDGES, fields);
+        edgeAirtableId.set(visEdgeId, created.id);
+      }
+      dirtyEdges.delete(visEdgeId);
+    }
+
+    showToast('✓ Guardado', 'success');
+    updateSaveStatus();
+  } catch (err) {
+    console.error(err);
+    showToast('Error al guardar: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 Guardar';
+  }
+}
+
+/* =====================================================================
+   REORGANIZE BY AREA
+   Sweeps every activity node on the canvas and lays them out in
+   horizontal swim lanes — one row per area in Project Areas `Order`,
+   columns by createdTime ascending within each lane.
+   Non-activity nodes are NOT moved (user-placed milestones, decisions,
+   areas-as-nodes, etc. keep their positions).
+===================================================================== */
+function reorganizeByArea() {
+  const activityNodes = [];
+  nodes.forEach(n => {
+    if (n._data && n._data.nodeType === 'actividad') activityNodes.push(n);
+  });
+
+  if (!activityNodes.length) {
+    showToast('No hay actividades en el grafo para reorganizar');
+    return;
+  }
+  if (!confirm(`Reorganizar ${activityNodes.length} actividad${activityNodes.length===1?'':'es'} en filas por área?\n(Otros nodos no se moverán)`)) return;
+
+  // Build {areaId: [actNode, ...]} buckets
+  const buckets = new Map();
+  for (const n of activityNodes) {
+    const sourceRec = allActividades.find(r => r.id === n._data.sourceRecordId);
+    const areaId = sourceRec ? (pAreaIds(sourceRec.fields.pArea)[0] || '__no_area__') : '__no_area__';
+    if (!buckets.has(areaId)) buckets.set(areaId, []);
+    buckets.get(areaId).push({ node: n, rec: sourceRec });
+  }
+
+  // Sort each bucket by source createdTime ascending
+  for (const arr of buckets.values()) {
+    arr.sort((a, b) => {
+      const ta = a.rec ? (a.rec.createdTime || '') : '';
+      const tb = b.rec ? (b.rec.createdTime || '') : '';
+      return ta.localeCompare(tb);
+    });
+  }
+
+  // Order the buckets themselves: by Project Areas Order, '__no_area__' last
+  const orderedBuckets = [...buckets.entries()]
+    .map(([areaId, arr]) => {
+      const order = areaId === '__no_area__' ? 99999 : areaOrder(areaId);
+      return { areaId, arr, order };
+    })
+    .sort((a, b) => a.order - b.order);
+
+  // Layout grid
+  const COL_W = 200;   // horizontal spacing between activity nodes in a lane
+  const ROW_H = 130;   // vertical spacing between area lanes
+  const X0 = 0;
+  const Y0 = 0;
+
+  let rowIndex = 0;
+  for (const { arr } of orderedBuckets) {
+    arr.forEach((entry, colIndex) => {
+      const newX = X0 + colIndex * COL_W;
+      const newY = Y0 + rowIndex * ROW_H;
+      const visId = entry.node.id;
+      // Update both vis-network position and our internal state
+      network.moveNode(visId, newX, newY);
+      const dataNode = nodes.get(visId);
+      if (dataNode) {
+        dataNode._data.posX = newX;
+        dataNode._data.posY = newY;
+        markNodeDirty(visId);
+      }
+    });
+    rowIndex++;
+  }
+
+  // Center the view on the new layout
+  setTimeout(() => network.fit({ animation: { duration: 600, easingFunction: 'easeInOutQuad' } }), 50);
+  showToast(`Reorganizadas ${activityNodes.length} actividades en ${orderedBuckets.length} áreas`, 'success');
+}
+
+/* =====================================================================
+   RELOAD
+===================================================================== */
+async function reloadGraph() {
+  if (isDirty() && !confirm('Tienes cambios sin guardar. ¿Recargar de todas formas?')) return;
+  // Reset state
+  if (network) network.destroy();
+  nodeAirtableId.clear();
+  edgeAirtableId.clear();
+  dirtyNodes.clear();
+  dirtyEdges.clear();
+  deletedNodeAirtableIds.length = 0;
+  deletedEdgeAirtableIds.length = 0;
+  await init();
+}
+
+/* =====================================================================
+   UI HELPERS
+===================================================================== */
+function showLoading(on) {
+  document.getElementById('loading-overlay').style.display = on ? 'flex' : 'none';
+}
+function updateEmptyState() {
+  const empty = document.getElementById('empty-state');
+  empty.style.display = (nodes && nodes.length === 0) ? 'block' : 'none';
+}
+function updateWeekPill() {
+  const pill = document.getElementById('week-pill');
+  if (!pill) return;
+  if (CURRENT_WEEK == null) {
+    pill.textContent = '';   // before WEEK_1_START — pill hides via :empty
+    return;
+  }
+  pill.textContent = `Semana ${CURRENT_WEEK}`;
+}
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Warn before leaving with unsaved changes
+window.addEventListener('beforeunload', (e) => {
+  if (isDirty()) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+// Go!
+init();
+</script>
+</body>
+</html>
