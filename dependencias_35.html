@@ -1,0 +1,4329 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dependencias · Estación Central</title>
+<script type="text/javascript" src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f5f6f8;
+    color: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ============ HEADER ============ */
+  .header {
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .header-left { display: flex; flex-direction: column; gap: 2px; }
+  .title-station {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    letter-spacing: 0.3px;
+  }
+  .title-app { font-size: 18px; font-weight: 700; color: #111; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .saved-status {
+    font-size: 11px;
+    color: #6b7280;
+    margin-right: 6px;
+  }
+  .saved-status.dirty { color: #d97706; font-weight: 600; }
+  .week-pill {
+    font-size: 11px;
+    font-weight: 700;
+    background: #fef3c7;
+    color: #92400e;
+    padding: 3px 9px;
+    border-radius: 10px;
+    letter-spacing: 0.3px;
+    margin-right: 4px;
+  }
+  .week-pill:empty { display: none; }
+  .icon-btn {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .icon-btn:hover { background: #f3f4f6; }
+  .icon-btn:active { transform: scale(0.96); }
+
+  /* ============ TOOLBAR ============ */
+  .toolbar {
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    flex-shrink: 0;
+  }
+  .toolbar::-webkit-scrollbar { height: 4px; }
+  .toolbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+
+  .tool-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tool-btn:active { transform: scale(0.96); }
+  .tool-btn.add-act { background: #dbeafe; color: #1e40af; }
+  .tool-btn.add-act:hover { background: #bfdbfe; }
+  .tool-btn.add-cot { background: #d1fae5; color: #065f46; }
+  .tool-btn.add-cot:hover { background: #a7f3d0; }
+  .tool-btn.add-cor { background: #cffafe; color: #155e75; }
+  .tool-btn.add-cor:hover { background: #a5f3fc; }
+  .tool-btn.add-are { background: #ede9fe; color: #5b21b6; }
+  .tool-btn.add-are:hover { background: #ddd6fe; }
+  .tool-btn.add-mile { background: #fef3c7; color: #92400e; }
+  .tool-btn.add-mile:hover { background: #fde68a; }
+  .tool-btn.add-dec { background: #ede9fe; color: #5b21b6; }
+  .tool-btn.add-dec:hover { background: #ddd6fe; }
+  .tool-btn.add-cust { background: #f3f4f6; color: #374151; }
+  .tool-btn.add-cust:hover { background: #e5e7eb; }
+  .tool-btn.save {
+    background: #111827;
+    color: #fff;
+    margin-left: auto;
+  }
+  .tool-btn.save:hover { background: #000; }
+  .tool-btn.save.dirty {
+    background: #d97706;
+    animation: pulse 1.5s infinite;
+  }
+  .tool-btn.save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    animation: none;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(217, 119, 6, 0); }
+  }
+  .tool-divider {
+    width: 1px;
+    height: 24px;
+    background: #e5e7eb;
+    margin: 0 4px;
+  }
+
+  /* ============ FILTER DRAWER ============ */
+  .filter-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 300px;
+    height: 100vh;
+    background: #fff;
+    border-right: 1px solid #e5e7eb;
+    box-shadow: 8px 0 24px rgba(0,0,0,0.08);
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+    z-index: 950;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .filter-drawer.show { transform: translateX(0); }
+  .filter-drawer-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0);
+    pointer-events: none;
+    transition: background 0.25s;
+    z-index: 940;
+  }
+  .filter-drawer-scrim.show {
+    background: rgba(0,0,0,0.18);
+    pointer-events: auto;
+  }
+  .filter-drawer-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f1f3f5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .filter-drawer-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111;
+  }
+  .filter-drawer-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #6b7280;
+    line-height: 1;
+    padding: 0 4px;
+  }
+  .filter-drawer-close:hover { color: #111; }
+  .filter-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 16px 16px;
+  }
+  .filter-drawer-footer {
+    border-top: 1px solid #f1f3f5;
+    padding: 10px 16px;
+    flex-shrink: 0;
+  }
+  .filter-reset-btn {
+    width: 100%;
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .filter-reset-btn:hover {
+    background: #e5e7eb;
+    color: #111;
+  }
+
+  /* Drawer sections — one per filter axis */
+  .fd-section {
+    margin-top: 14px;
+  }
+  .fd-section:first-child { margin-top: 6px; }
+  .fd-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #6b7280;
+    margin-bottom: 8px;
+  }
+  .fd-section-hint {
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    color: #9ca3af;
+  }
+  .fd-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .fd-chip-row:empty::before {
+    content: 'Sin áreas configuradas';
+    font-size: 11px;
+    color: #9ca3af;
+    font-style: italic;
+  }
+
+  /* Filter trigger button in toolbar */
+  .tool-btn.filter-trigger {
+    background: #fff;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    padding: 7px 10px;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .tool-btn.filter-trigger:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+  }
+  .tool-btn.filter-trigger.has-active {
+    background: #1f2937;
+    color: #fff;
+    border-color: #1f2937;
+  }
+  .tool-btn.filter-trigger.has-active:hover {
+    background: #374151;
+  }
+  .filter-count-badge {
+    display: none;
+    min-width: 16px;
+    height: 16px;
+    background: #ef4444;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    line-height: 1;
+  }
+  .tool-btn.filter-trigger.has-active .filter-count-badge {
+    display: inline-flex;
+  }
+
+  /* Mobile: drawer becomes wider so it's usable on narrow screens */
+  @media (max-width: 600px) {
+    .filter-drawer {
+      width: 88%;
+      max-width: 320px;
+    }
+  }
+
+  /* Filter chips — interactive type filters */
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #fff;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1;
+    user-select: none;
+    font-family: inherit;
+  }
+  .filter-chip:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+  }
+  .filter-chip.active {
+    background: #1f2937;
+    color: #fff;
+    border-color: #1f2937;
+  }
+  .filter-chip.active:hover {
+    background: #374151;
+  }
+  /* Inactive chips — visibly muted, shapes inside fade too */
+  .filter-chip:not(.active) .legend-shape {
+    opacity: 0.55;
+  }
+  .filter-chip.active .legend-shape {
+    /* Active chip has dark bg, so swap shape color to white where applicable */
+  }
+  .filter-chip.active .legend-shape.star {
+    color: #fde68a;   /* gold star reads on dark bg */
+  }
+  .filter-chip.active .legend-shape:not(.star):not(.triangle) {
+    background: #fff;
+  }
+  .filter-chip.active .legend-shape.cylinder::before {
+    background: #d1d5db;
+  }
+  .filter-chip.active .legend-shape.triangle {
+    border-bottom-color: #fff;
+  }
+
+  /* Special "All" chip — visually distinct so it reads as a reset */
+  .filter-chip.all {
+    background: #ede9fe;
+    color: #5b21b6;
+    border-color: #ddd6fe;
+    font-weight: 700;
+  }
+  .filter-chip.all:hover {
+    background: #ddd6fe;
+  }
+  .filter-chip.all.active {
+    background: #5b21b6;
+    color: #fff;
+    border-color: #5b21b6;
+  }
+  .filter-chip.all.active:hover {
+    background: #6d28d9;
+  }
+
+  .legend-shape {
+    width: 14px;
+    height: 14px;
+    background: #9ca3af;
+    flex-shrink: 0;
+  }
+  .legend-shape.box { border-radius: 3px; }
+  .legend-shape.ellipse { border-radius: 50%; height: 10px; margin-top: 2px; }
+  .legend-shape.diamond {
+    transform: rotate(45deg);
+    width: 10px; height: 10px;
+    margin: 2px;
+  }
+  .legend-shape.triangle {
+    width: 0; height: 0;
+    background: none;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 12px solid #9ca3af;
+    margin-top: 1px;
+  }
+  .legend-shape.cylinder {
+    width: 12px;
+    height: 14px;
+    background: #9ca3af;
+    border-radius: 50% / 25%;
+    position: relative;
+  }
+  .legend-shape.cylinder::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: #6b7280;
+    border-radius: 50%;
+  }
+  .legend-shape.star {
+    background: none;
+    color: #f59e0b;
+    width: auto; height: auto;
+    font-size: 14px;
+  }
+  .legend-shape.hex {
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  }
+  .legend-color {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Area chips — smaller than type chips, teal active color so the two
+     filter rows are visually distinct. */
+  .area-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    font-size: 11px;
+    font-weight: 500;
+    background: #fff;
+    color: #6b7280;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.2;
+    user-select: none;
+    font-family: inherit;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .area-chip:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+  }
+  .area-chip.active {
+    background: #0f766e;
+    color: #fff;
+    border-color: #0f766e;
+    font-weight: 600;
+  }
+  .area-chip.active:hover { background: #115e59; }
+  .area-chip.all {
+    background: #ede9fe;
+    color: #5b21b6;
+    border-color: #ddd6fe;
+    font-weight: 700;
+  }
+  .area-chip.all:hover { background: #ddd6fe; }
+  .area-chip.all.active {
+    background: #5b21b6;
+    color: #fff;
+    border-color: #5b21b6;
+  }
+  .area-chip.all.active:hover { background: #6d28d9; }
+  .area-chip.no-area {
+    font-style: italic;
+  }
+
+  .status-chip,
+  .cotiz-status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    font-size: 12px;
+    font-weight: 500;
+    background: #fff;
+    color: #6b7280;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.2;
+    user-select: none;
+    font-family: inherit;
+    flex-shrink: 0;
+  }
+  .status-chip:hover,
+  .cotiz-status-chip:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+  }
+  .status-chip.active,
+  .cotiz-status-chip.active {
+    background: #1f2937;
+    color: #fff;
+    border-color: #1f2937;
+  }
+  .status-chip.active:hover,
+  .cotiz-status-chip.active:hover { background: #374151; }
+  .status-chip.all,
+  .cotiz-status-chip.all {
+    background: #ede9fe;
+    color: #5b21b6;
+    border-color: #ddd6fe;
+    font-weight: 700;
+  }
+  .status-chip.all:hover,
+  .cotiz-status-chip.all:hover { background: #ddd6fe; }
+  .status-chip.all.active,
+  .cotiz-status-chip.all.active {
+    background: #5b21b6;
+    color: #fff;
+    border-color: #5b21b6;
+  }
+  .status-chip.all.active:hover,
+  .cotiz-status-chip.all.active:hover { background: #6d28d9; }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.6);
+  }
+
+  /* ============ NETWORK CANVAS ============ */
+  #network-container {
+    flex: 1;
+    background: #f5f6f8;
+    background-image:
+      radial-gradient(circle, #e5e7eb 1px, transparent 1px);
+    background-size: 20px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  #network { width: 100%; height: 100%; }
+
+  /* Shift+drag rubber-band lasso for multi-select */
+  .lasso-rect {
+    position: absolute;
+    background: rgba(37, 99, 235, 0.12);
+    border: 1.5px dashed #2563eb;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* Empty state */
+  .empty-state {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: #9ca3af;
+    pointer-events: none;
+  }
+  .empty-state-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; color: #6b7280; }
+  .empty-state-sub { font-size: 13px; }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 100;
+  }
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #111827;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ============ MODAL ============ */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+  }
+  .modal-header {
+    padding: 16px 18px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-title { font-size: 16px; font-weight: 700; }
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 22px;
+    cursor: pointer;
+    color: #6b7280;
+    line-height: 1;
+  }
+  .modal-search {
+    padding: 12px 18px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .modal-search input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+  }
+  .modal-search input:focus { border-color: #2563eb; }
+  .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+  .picker-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .picker-item:hover { background: #f3f4f6; }
+  .picker-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .picker-item.disabled:hover { background: transparent; }
+  .picker-item-status {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .picker-item-status-emoji {
+    font-size: 14px;
+    line-height: 1;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .picker-item-status-spacer {
+    width: 16px;
+    flex-shrink: 0;
+  }
+  .picker-item-text { flex: 1; min-width: 0; }
+  .picker-item-name {
+    font-size: 13px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .picker-item-meta {
+    font-size: 11px;
+    color: #6b7280;
+    margin-top: 2px;
+  }
+  .picker-item-added {
+    font-size: 10px;
+    background: #d1fae5;
+    color: #065f46;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  /* Activity picker — area group dividers */
+  .picker-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px 4px;
+    margin-top: 4px;
+    border-top: 1px solid #f3f4f6;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #6b7280;
+    font-weight: 700;
+    background: #fafbfc;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .picker-group-header:first-child { border-top: none; margin-top: 0; }
+  .picker-group-count {
+    background: #e5e7eb;
+    color: #374151;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    letter-spacing: 0;
+  }
+
+  /* Free-form node input */
+  .freeform-form { padding: 16px 18px; }
+  .freeform-form label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #374151;
+  }
+  .freeform-form input,
+  .freeform-form textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    margin-bottom: 12px;
+    outline: none;
+  }
+  .freeform-form input:focus,
+  .freeform-form textarea:focus { border-color: #2563eb; }
+  .freeform-form textarea { resize: vertical; min-height: 60px; }
+  .freeform-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 12px 18px;
+    border-top: 1px solid #e5e7eb;
+  }
+  .btn-cancel, .btn-confirm {
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+  }
+  .btn-cancel { background: #f3f4f6; color: #374151; }
+  .btn-confirm { background: #111827; color: #fff; }
+
+  /* ============ DETAIL PANEL (slide-in) ============ */
+  .detail-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 340px;
+    height: 100vh;
+    background: #fff;
+    border-left: 1px solid #e5e7eb;
+    box-shadow: -8px 0 24px rgba(0,0,0,0.08);
+    transform: translateX(100%);
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+    z-index: 950;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .detail-panel.show { transform: translateX(0); }
+
+  .detail-panel-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0);
+    pointer-events: none;
+    transition: background 0.25s;
+    z-index: 940;
+  }
+  .detail-panel-scrim.show {
+    background: rgba(0,0,0,0.18);
+    pointer-events: auto;
+  }
+
+  .detail-panel-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f1f3f5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .detail-panel-type {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #6b7280;
+  }
+  .detail-panel-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #6b7280;
+    line-height: 1;
+    padding: 0 4px;
+  }
+  .detail-panel-close:hover { color: #111; }
+
+  .detail-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+
+  /* Sections inside the panel */
+  .dp-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111;
+    line-height: 1.3;
+    margin-bottom: 12px;
+    word-wrap: break-word;
+  }
+  .dp-status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .dp-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #f3f4f6;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+  }
+  .dp-status-pill.meta {
+    background: #ede9fe;
+    color: #5b21b6;
+  }
+  .dp-status-pill.adicional {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  /* Editable status pill — clickable, has hover affordance */
+  button.dp-status-pill {
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, box-shadow 0.15s;
+  }
+  button.dp-status-pill:hover {
+    background: #e5e7eb;
+    box-shadow: 0 0 0 1px #d1d5db;
+  }
+  .dp-status-pill-edit-hint {
+    font-size: 10px;
+    opacity: 0.55;
+    margin-left: 2px;
+  }
+
+  /* Status picker — appears when user clicks the editable pill */
+  .dp-status-picker {
+    display: inline-flex;
+    gap: 4px;
+    background: #f3f4f6;
+    padding: 4px 6px;
+    border-radius: 14px;
+    align-items: center;
+  }
+  .dp-status-option {
+    background: transparent;
+    border: 1.5px solid transparent;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s ease;
+    font-family: inherit;
+  }
+  .dp-status-option:hover {
+    background: #e5e7eb;
+  }
+  .dp-status-option.selected {
+    border-color: #1f2937;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transform: scale(1.05);
+  }
+  .dp-status-cancel {
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+    margin-left: 2px;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+  }
+  .dp-status-cancel:hover { color: #1f2937; background: #e5e7eb; }
+
+  /* Commit button — green, only appears when staged !== saved */
+  .dp-status-commit {
+    background: #059669;
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-family: inherit;
+    animation: commit-fade-in 0.18s ease;
+  }
+  .dp-status-commit:hover { background: #047857; }
+  .dp-status-commit:disabled {
+    background: #9ca3af;
+    cursor: wait;
+  }
+  @keyframes commit-fade-in {
+    from { opacity: 0; transform: translateX(-6px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .dp-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .dp-field {
+    background: #fafbfc;
+    border-radius: 8px;
+    padding: 8px 10px;
+    min-width: 0;
+  }
+  .dp-field-full { grid-column: 1 / -1; }
+  .dp-field-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6b7280;
+    margin-bottom: 3px;
+  }
+  .dp-field-value {
+    font-size: 13px;
+    color: #1f2937;
+    word-wrap: break-word;
+    line-height: 1.35;
+  }
+  .dp-field-value.amount {
+    font-weight: 700;
+    color: #111;
+  }
+  .dp-field-value.empty { color: #9ca3af; font-style: italic; }
+  .dp-field-value a {
+    color: #2563eb;
+    text-decoration: none;
+  }
+  .dp-field-value a:hover { text-decoration: underline; }
+
+  .dp-section {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid #f1f3f5;
+  }
+  .dp-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #6b7280;
+    margin-bottom: 8px;
+  }
+  .dp-alert-box {
+    background: #fef3c7;
+    border-left: 3px solid #f59e0b;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #78350f;
+    line-height: 1.4;
+    white-space: pre-wrap;
+  }
+  .dp-notes-box {
+    background: #f9fafb;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.4;
+    white-space: pre-wrap;
+  }
+
+  /* Drive Links — preview cards in cotization, corte, area, activity panels */
+  .dp-doc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .dp-doc-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .dp-doc-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .dp-doc-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .dp-doc-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #1f2937;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dp-doc-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 9px;
+    background: #1f2937;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .dp-doc-open:hover { background: #374151; }
+  .dp-doc-open-label {
+    /* Hide the text label on narrow panels — the ↗ arrow is enough */
+  }
+  .dp-doc-frame-wrap {
+    width: 100%;
+    height: 280px;
+    background: #f3f4f6;
+    position: relative;
+  }
+  .dp-doc-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
+  .dp-doc-noembed {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 14px;
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.4;
+  }
+  .dp-doc-noembed-icon {
+    font-size: 28px;
+    margin-bottom: 6px;
+    opacity: 0.6;
+  }
+  .dp-doc-noembed-sub {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: 4px;
+  }
+
+  /* On narrow panels (mobile bottom-sheet), hide the text label so the
+     button stays compact and the filename has more room. */
+  @media (max-width: 600px) {
+    .dp-doc-open-label { display: none; }
+  }
+
+  /* Acciones sub-section */
+  .dp-section-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .dp-section-row .dp-section-title { margin-bottom: 0; }
+  .dp-action-summary {
+    display: inline-flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .dp-action-summary .dp-status-pill {
+    padding: 2px 8px;
+    font-size: 11px;
+  }
+  .dp-action-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .dp-action-row {
+    display: flex;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    align-items: flex-start;
+  }
+  .dp-action-status {
+    font-size: 14px;
+    flex-shrink: 0;
+    line-height: 1.2;
+    margin-top: 1px;
+  }
+  .dp-action-text { flex: 1; min-width: 0; }
+  .dp-action-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1f2937;
+    line-height: 1.3;
+    word-wrap: break-word;
+  }
+  .dp-action-desc {
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.35;
+    margin-top: 2px;
+    word-wrap: break-word;
+  }
+  .dp-loading {
+    padding: 10px 12px;
+    background: #f9fafb;
+    border-radius: 6px;
+    color: #6b7280;
+    font-size: 12px;
+    font-style: italic;
+  }
+  .dp-loading::before {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border: 1.5px solid #d1d5db;
+    border-top-color: #6b7280;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: -1px;
+    animation: dp-spin 0.7s linear infinite;
+  }
+  @keyframes dp-spin { to { transform: rotate(360deg); } }
+
+  /* Mobile: bottom sheet instead of right side panel */
+  @media (max-width: 600px) {
+    .detail-panel {
+      width: 100%;
+      height: 75vh;
+      top: auto;
+      bottom: 0;
+      right: 0;
+      border-left: none;
+      border-top: 1px solid #e5e7eb;
+      border-radius: 16px 16px 0 0;
+      transform: translateY(100%);
+      box-shadow: 0 -8px 24px rgba(0,0,0,0.08);
+    }
+    .detail-panel.show { transform: translateY(0); }
+  }
+
+  /* ============ TOAST ============ */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #111827;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    opacity: 0;
+    transition: all 0.25s;
+    z-index: 2000;
+    pointer-events: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .toast.success { background: #059669; }
+  .toast.error { background: #dc2626; }
+
+  /* vis-network tooltip — used to surface the activity Alert text */
+  .vis-tooltip {
+    background: #1f2937 !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 10px 12px !important;
+    font-family: -apple-system, "Segoe UI", sans-serif !important;
+    font-size: 12px !important;
+    line-height: 1.45 !important;
+    max-width: 280px !important;
+    white-space: pre-wrap !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25) !important;
+  }
+
+  /* ============ NODE CONTEXT MENU ============ */
+  .ctx-menu {
+    position: fixed;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    padding: 4px;
+    z-index: 1500;
+    display: none;
+    min-width: 160px;
+  }
+  .ctx-menu.show { display: block; }
+  .ctx-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ctx-item:hover { background: #f3f4f6; }
+  .ctx-item.danger { color: #dc2626; }
+  .ctx-item.danger:hover { background: #fee2e2; }
+  .ctx-divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<div class="header">
+  <div class="header-left">
+    <div class="title-station">Estación Central</div>
+    <div class="title-app">Dependencias</div>
+  </div>
+  <div class="header-right">
+    <span class="week-pill" id="week-pill" title="Semana actual del proyecto"></span>
+    <span class="saved-status" id="saved-status">—</span>
+    <button class="icon-btn" onclick="reloadGraph()" title="Recargar">↻</button>
+    <button class="icon-btn" onclick="window.close()" title="Cerrar">✕</button>
+  </div>
+</div>
+
+<!-- ============ TOOLBAR ============ -->
+<div class="toolbar">
+  <button class="tool-btn filter-trigger" id="filter-trigger-btn" onclick="openFilterDrawer()" title="Filtros">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+    </svg>
+    <span class="filter-count-badge" id="filter-count-badge"></span>
+  </button>
+  <div class="tool-divider"></div>
+  <button class="tool-btn add-act" onclick="openPicker('actividad')">+ Actividad</button>
+  <button class="tool-btn add-cot" onclick="openPicker('cotizacion')">+ Cotización</button>
+  <button class="tool-btn add-cor" onclick="openPicker('partida')">+ Corte</button>
+  <button class="tool-btn add-are" onclick="openPicker('area')">+ Área</button>
+  <div class="tool-divider"></div>
+  <button class="tool-btn add-mile" onclick="openFreeform('milestone')">+ Hito</button>
+  <button class="tool-btn add-dec" onclick="openFreeform('decision')">+ Decisión</button>
+  <button class="tool-btn add-cust" onclick="openFreeform('custom')">+ Personalizado</button>
+  <div class="tool-divider"></div>
+  <button class="tool-btn add-cust" onclick="toggleEdgeMode()" id="edge-mode-btn">↔ Conectar</button>
+  <button class="tool-btn add-cust" onclick="reorganizeByArea()" title="Reorganizar actividades por área">⊞ Por Área</button>
+  <button class="tool-btn save" id="save-btn" onclick="saveLayout()">💾 Guardar</button>
+</div>
+
+<!-- ============ FILTER DRAWER (slide-in from left) ============ -->
+<div class="filter-drawer" id="filter-drawer">
+  <div class="filter-drawer-header">
+    <div class="filter-drawer-title">Filtros</div>
+    <button class="filter-drawer-close" onclick="closeFilterDrawer()" title="Cerrar">×</button>
+  </div>
+
+  <div class="filter-drawer-body">
+    <!-- Type section -->
+    <div class="fd-section">
+      <div class="fd-section-title">Tipo de nodo</div>
+      <div class="fd-chip-row">
+        <button class="filter-chip all active" data-filter="__all__" onclick="onFilterChipClick('__all__')">Todo</button>
+        <button class="filter-chip active" data-filter="actividad" onclick="onFilterChipClick('actividad')"><span class="legend-shape box"></span>Actividad</button>
+        <button class="filter-chip active" data-filter="cotizacion" onclick="onFilterChipClick('cotizacion')"><span class="legend-shape ellipse"></span>Cotización</button>
+        <button class="filter-chip active" data-filter="partida" onclick="onFilterChipClick('partida')"><span class="legend-shape triangle"></span>Corte</button>
+        <button class="filter-chip active" data-filter="area" onclick="onFilterChipClick('area')"><span class="legend-shape cylinder"></span>Área</button>
+        <button class="filter-chip active" data-filter="milestone" onclick="onFilterChipClick('milestone')"><span class="legend-shape star">★</span>Hito</button>
+        <button class="filter-chip active" data-filter="decision" onclick="onFilterChipClick('decision')"><span class="legend-shape diamond"></span>Decisión</button>
+        <button class="filter-chip active" data-filter="custom" onclick="onFilterChipClick('custom')"><span class="legend-shape hex"></span>Personalizado</button>
+      </div>
+    </div>
+
+    <!-- Area section — chips injected dynamically once Project Areas load -->
+    <div class="fd-section" id="fd-area-section">
+      <div class="fd-section-title">Área de proyecto <span class="fd-section-hint">(actividades)</span></div>
+      <div class="fd-chip-row" id="area-legend"></div>
+    </div>
+
+    <!-- Status section -->
+    <div class="fd-section">
+      <div class="fd-section-title">Estado <span class="fd-section-hint">(actividades)</span></div>
+      <div class="fd-chip-row" id="status-legend">
+        <button class="status-chip all active" data-status="__all__" onclick="onStatusChipClick('__all__')">Todo</button>
+        <button class="status-chip active" data-status="🔴" onclick="onStatusChipClick('🔴')" title="Detenida"><span class="status-dot" style="background:#dc2626"></span>🔴</button>
+        <button class="status-chip active" data-status="🟡" onclick="onStatusChipClick('🟡')" title="En pausa"><span class="status-dot" style="background:#f59e0b"></span>🟡</button>
+        <button class="status-chip active" data-status="🟢" onclick="onStatusChipClick('🟢')" title="En progreso"><span class="status-dot" style="background:#10b981"></span>🟢</button>
+        <button class="status-chip active" data-status="🔵" onclick="onStatusChipClick('🔵')" title="Completada"><span class="status-dot" style="background:#3b82f6"></span>🔵</button>
+        <button class="status-chip active" data-status="〇" onclick="onStatusChipClick('〇')" title="Deprecada"><span class="status-dot" style="background:#9ca3af"></span>〇</button>
+      </div>
+    </div>
+
+    <!-- Cotization status section -->
+    <div class="fd-section">
+      <div class="fd-section-title">Estado <span class="fd-section-hint">(cotizaciones)</span></div>
+      <div class="fd-chip-row" id="cotiz-status-legend">
+        <button class="cotiz-status-chip all active" data-cstatus="__all__" onclick="onCotizStatusChipClick('__all__')">Todo</button>
+        <button class="cotiz-status-chip active" data-cstatus="🔴" onclick="onCotizStatusChipClick('🔴')" title="Rechazada"><span class="status-dot" style="background:#dc2626"></span>🔴</button>
+        <button class="cotiz-status-chip active" data-cstatus="🟡" onclick="onCotizStatusChipClick('🟡')" title="Pendiente"><span class="status-dot" style="background:#f59e0b"></span>🟡</button>
+        <button class="cotiz-status-chip active" data-cstatus="🟢" onclick="onCotizStatusChipClick('🟢')" title="Aprobada"><span class="status-dot" style="background:#10b981"></span>🟢</button>
+        <button class="cotiz-status-chip active" data-cstatus="🔵" onclick="onCotizStatusChipClick('🔵')" title="Pagada"><span class="status-dot" style="background:#3b82f6"></span>🔵</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-drawer-footer">
+    <button class="filter-reset-btn" onclick="resetAllFilters()">Restablecer todo</button>
+  </div>
+</div>
+<div class="filter-drawer-scrim" id="filter-drawer-scrim" onclick="closeFilterDrawer()"></div>
+
+<!-- ============ NETWORK ============ -->
+<div id="network-container">
+  <div id="network"></div>
+  <div class="empty-state" id="empty-state" style="display:none;">
+    <div class="empty-state-icon">🕸️</div>
+    <div class="empty-state-title">Lienzo vacío</div>
+    <div class="empty-state-sub">Añade actividades, cotizaciones o nodos personalizados desde la barra superior</div>
+  </div>
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+    <div style="font-size:13px;color:#6b7280;">Cargando grafo…</div>
+  </div>
+</div>
+
+<!-- ============ PICKER MODAL ============ -->
+<div class="modal-overlay" id="picker-modal" onclick="if(event.target===this)closePicker()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="picker-title">Seleccionar</div>
+      <button class="modal-close" onclick="closePicker()">×</button>
+    </div>
+    <div class="modal-search">
+      <input type="text" id="picker-search" placeholder="Buscar..." oninput="filterPicker()" />
+    </div>
+    <div class="modal-body" id="picker-body"></div>
+  </div>
+</div>
+
+<!-- ============ FREE-FORM MODAL ============ -->
+<div class="modal-overlay" id="freeform-modal" onclick="if(event.target===this)closeFreeform()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="freeform-title">Nuevo nodo</div>
+      <button class="modal-close" onclick="closeFreeform()">×</button>
+    </div>
+    <div class="freeform-form">
+      <label>Etiqueta</label>
+      <input type="text" id="freeform-label" placeholder="Ej: Aprobación METAMORFOSIS" />
+      <label>Notas (opcional)</label>
+      <textarea id="freeform-notes" placeholder="Detalles adicionales..."></textarea>
+    </div>
+    <div class="freeform-actions">
+      <button class="btn-cancel" onclick="closeFreeform()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmFreeform()">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ EDGE EDITOR MODAL ============ -->
+<div class="modal-overlay" id="edge-modal" onclick="if(event.target===this)closeEdgeModal()">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title">Tipo de conexión</div>
+      <button class="modal-close" onclick="closeEdgeModal()">×</button>
+    </div>
+    <div class="freeform-form">
+      <label>Relación</label>
+      <select id="edge-type-select" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">
+        <option value="depends_on">Depende de (→)</option>
+        <option value="blocks">Bloquea a (⊗)</option>
+        <option value="relates_to">Se relaciona con (--)</option>
+        <option value="feeds_into">Alimenta a (⇒)</option>
+      </select>
+      <label style="margin-top:12px;">Etiqueta (opcional)</label>
+      <input type="text" id="edge-label" placeholder="Ej: Requiere aprobación previa" />
+    </div>
+    <div class="freeform-actions">
+      <button class="btn-cancel" onclick="cancelEdgeCreation()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmEdgeCreation()">Crear</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CONTEXT MENU (NODE) ============ -->
+<div class="ctx-menu" id="ctx-menu">
+  <div class="ctx-item" onclick="ctxAction('open-source')">🔗 Abrir origen</div>
+  <div class="ctx-item" onclick="ctxAction('edit-label')">✏️ Editar etiqueta</div>
+  <div class="ctx-divider"></div>
+  <div class="ctx-item danger" onclick="ctxAction('delete')">🗑️ Eliminar nodo</div>
+</div>
+
+<!-- ============ CONTEXT MENU (EDGE) ============ -->
+<div class="ctx-menu" id="ctx-edge-menu">
+  <div class="ctx-item" onclick="ctxEdgeAction('edit-label')">✏️ Editar etiqueta</div>
+  <div class="ctx-item" onclick="ctxEdgeAction('change-type')">↔ Cambiar tipo</div>
+  <div class="ctx-divider"></div>
+  <div class="ctx-item danger" onclick="ctxEdgeAction('delete')">🗑️ Eliminar conexión</div>
+</div>
+
+<!-- ============ DETAIL PANEL (slide-in from right) ============ -->
+<div class="detail-panel" id="detail-panel">
+  <div class="detail-panel-header">
+    <div class="detail-panel-type" id="detail-panel-type"></div>
+    <button class="detail-panel-close" onclick="closeDetailPanel()" title="Cerrar">×</button>
+  </div>
+  <div class="detail-panel-body" id="detail-panel-body"></div>
+</div>
+<div class="detail-panel-scrim" id="detail-panel-scrim" onclick="closeDetailPanel()"></div>
+
+<!-- ============ TOAST ============ -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   CONFIG — same pattern as index.html
+   IMPORTANT: replace these with your actual Airtable values
+   (or load them from a shared config if you've already centralized that)
+===================================================================== */
+const AIRTABLE_API_KEY = 'pat8SF9w9X7yJCGyp.1ebcc53985c2bd9f8181d748623c3a4768f638da2d826840c6ed813e7e4bce4f';
+const AIRTABLE_BASE_ID = 'appMQxYmohtXSCvUn';
+
+const TBL_NODES      = 'GraphNodes';
+const TBL_EDGES      = 'GraphEdges';
+const TBL_ACTIVIDADES = 'Table 1';
+const TBL_COTIZACIONES = 'Cotizaciones';
+const TBL_CORTES      = 'Cortes';
+const TBL_AREAS       = 'Project Areas';
+const TBL_ACTIONS     = 'Actions';
+
+// =====================================================================
+// PROJECT WEEK COUNTDOWN
+//
+// We count DOWN to a target end date. Hitos in the graph are labeled with
+// the number of weeks remaining: "Semana 5" means "5 weeks until end".
+// The week of the end date itself is Semana 0.
+//
+// Phase 2 hitos use the prefix "F2 " (e.g. "F2 Semana 5"). When a new
+// countdown begins, update BOTH constants below:
+//   1. PROJECT_END_DATE — Monday of the new Semana 0 (YYYY-MM-DD, local)
+//   2. ACTIVE_PHASE     — 1 for Semana-only labels, 2 for "F2 Semana" labels
+//
+// Current anchor: Wed May 21, 2026 = Semana 3  →  Semana 0 starts Mon Jun 8, 2026.
+// =====================================================================
+const PROJECT_END_DATE = '2026-06-08';
+const ACTIVE_PHASE = 1;
+
+const API_BASE = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`;
+const headers = {
+  'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
+  'Content-Type': 'application/json'
+};
+
+/* =====================================================================
+   COUNTDOWN HELPERS
+   - currentWeekNumber(): weeks remaining until PROJECT_END_DATE.
+     0 when we're in the end week, negative once past it.
+   - parseWeekLabel(label): returns { phase, week } or null.
+     "Semana 5"      -> { phase: 1, week: 5 }
+     "F2 Semana 5"   -> { phase: 2, week: 5 }
+     "Permits done"  -> null  (non-weekly hito)
+   - extractWeekNumber(label): legacy compat shim. Returns the week number
+     for the ACTIVE phase only. Returns null for other phases or non-weekly
+     hitos. This way only the active phase's hitos get highlighted/grayed.
+===================================================================== */
+function currentWeekNumber() {
+  const parts = PROJECT_END_DATE.split('-');
+  if (parts.length !== 3) return null;
+  // End date interpreted as midnight local time of the Monday of Semana 0
+  const end = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Anchor today to the Monday of its week (so a Wednesday and the
+  // following Sunday produce the same week number).
+  const dayOfWeek = today.getDay();   // 0 Sun .. 6 Sat
+  const daysSinceMonday = (dayOfWeek + 6) % 7;   // Mon=0, Tue=1, ..., Sun=6
+  const thisMonday = new Date(today);
+  thisMonday.setDate(today.getDate() - daysSinceMonday);
+
+  const diffMs = end - thisMonday;
+  // Convert ms → weeks. Floor so we stay on the current week until Monday
+  // of the next week ticks over.
+  const weeks = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 7));
+  return weeks;
+}
+
+function parseWeekLabel(label) {
+  if (!label) return null;
+  const s = String(label).trim();
+  // Phase 2 prefix — match "F2" followed by a space or directly by a digit
+  const f2 = s.match(/^F\s*2\b[^\d]*(\d+)/i);
+  if (f2) return { phase: 2, week: parseInt(f2[1], 10) };
+  // Default = Phase 1. Pull the first integer in the label.
+  const p1 = s.match(/(\d+)/);
+  if (p1) return { phase: 1, week: parseInt(p1[1], 10) };
+  return null;
+}
+
+function extractWeekNumber(label) {
+  const parsed = parseWeekLabel(label);
+  if (!parsed) return null;
+  // Only return a number for hitos in the currently-active phase.
+  // Hitos from other phases are treated as "non-weekly" so they don't
+  // compete for the current-week highlight or temporal coloring.
+  if (parsed.phase !== ACTIVE_PHASE) return null;
+  return parsed.week;
+}
+
+const CURRENT_WEEK = currentWeekNumber();
+
+/* =====================================================================
+   STATE
+===================================================================== */
+let nodes;             // vis DataSet
+let edges;             // vis DataSet
+let network;           // vis Network instance
+
+let allActividades = [];
+let allCotizaciones = [];
+let allCortes = [];
+let allAreas = [];
+
+// Actions are fetched lazily on first activity panel open.
+// `null` = not yet fetched. Once fetched, becomes an array (possibly empty).
+let allActions = null;
+let actionsLoadingPromise = null;   // dedupes concurrent fetch requests
+
+// Track Airtable record IDs for nodes/edges already saved
+// Map: visNodeId -> airtableRecordId  (undefined = unsaved)
+const nodeAirtableId = new Map();
+const edgeAirtableId = new Map();
+
+// Track changes since last save
+const dirtyNodes = new Set();    // visNodeId of modified/created
+const dirtyEdges = new Set();    // visEdgeId of modified/created
+const deletedNodeAirtableIds = []; // airtable record IDs to DELETE
+const deletedEdgeAirtableIds = [];
+
+let pickerType = null;     // 'actividad' | 'cotizacion'
+let freeformType = null;   // 'milestone' | 'decision' | 'custom'
+let pendingEdge = null;    // {from, to, callback} during edge creation
+let ctxNodeId = null;      // node currently right-clicked
+let ctxEdgeId = null;      // edge currently right-clicked
+let edgeMode = false;
+
+// Filter state — which node types are currently visible. Default: all.
+const ALL_NODE_TYPES = ['actividad','cotizacion','partida','area','milestone','decision','custom'];
+let visibleTypes = new Set(ALL_NODE_TYPES);
+
+// Area filter state — which Project Areas are currently visible (by record id).
+// Special key '__no_area__' represents activities without a pArea assignment.
+// null = filter not initialized yet (e.g. before areas load); equivalent to "show everything".
+let visibleAreas = null;
+const NO_AREA_KEY = '__no_area__';
+
+// Status filter state — which activity statuses are currently visible.
+// Applies ONLY to activities; other node types are unaffected by this filter.
+const ALL_STATUSES = ['🔴', '🟡', '🟢', '🔵', '〇'];
+let visibleStatuses = new Set(ALL_STATUSES);
+
+// Cotization status filter — parallel to activity status but with 4 options
+// (no 〇 deprecated state). Applies ONLY to cotization nodes.
+const ALL_COTIZ_STATUSES = ['🔴', '🟡', '🟢', '🔵'];
+let visibleCotizStatuses = new Set(ALL_COTIZ_STATUSES);
+
+/* =====================================================================
+   STYLE LOOKUPS
+===================================================================== */
+const SHAPE_BY_TYPE = {
+  actividad:  'box',
+  cotizacion: 'ellipse',
+  partida:    'triangle',
+  area:       'database',
+  milestone:  'star',
+  decision:   'diamond',
+  custom:     'hexagon'
+};
+
+// Colors by activity status (match index.html convention)
+const COLOR_BY_STATUS = {
+  '🔴': '#dc2626',
+  '🟡': '#f59e0b',
+  '🟢': '#10b981',
+  '🔵': '#3b82f6',
+  '〇': '#9ca3af'
+};
+
+// Default fill when no status applies
+const DEFAULT_COLOR_BY_TYPE = {
+  actividad:  '#9ca3af',  // overridden by status
+  cotizacion: '#10b981',
+  partida:    '#0891b2',  // teal — feels "structural / line-item"
+  area:       '#7c3aed',  // deep purple — top-level container
+  milestone:  '#f59e0b',
+  decision:   '#8b5cf6',
+  custom:     '#6b7280'
+};
+
+const EDGE_STYLE = {
+  depends_on: { color: '#374151', dashes: false, arrows: 'to' },
+  blocks:     { color: '#dc2626', dashes: false, arrows: 'to', width: 2.5 },
+  relates_to: { color: '#9ca3af', dashes: true,  arrows: '' },
+  feeds_into: { color: '#2563eb', dashes: false, arrows: 'to' }
+};
+
+/* =====================================================================
+   AIRTABLE FETCH HELPERS
+===================================================================== */
+async function airtableList(table, params = '') {
+  const url = `${API_BASE}/${encodeURIComponent(table)}${params ? '?' + params : ''}`;
+  const records = [];
+  let offset = null;
+  do {
+    const fullUrl = url + (offset ? (params ? '&' : '?') + 'offset=' + offset : '');
+    const r = await fetch(fullUrl, { headers });
+    if (!r.ok) throw new Error(`Fetch ${table} failed: ${r.status}`);
+    const data = await r.json();
+    records.push(...data.records);
+    offset = data.offset;
+  } while (offset);
+  return records;
+}
+
+async function airtableCreate(table, fields) {
+  const r = await fetch(`${API_BASE}/${encodeURIComponent(table)}`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ fields })
+  });
+  if (!r.ok) throw new Error(`Create ${table} failed: ${r.status} ${await r.text()}`);
+  return await r.json();
+}
+
+async function airtableUpdate(table, recordId, fields) {
+  const r = await fetch(`${API_BASE}/${encodeURIComponent(table)}/${recordId}`, {
+    method: 'PATCH', headers,
+    body: JSON.stringify({ fields })
+  });
+  if (!r.ok) throw new Error(`Update ${table} failed: ${r.status} ${await r.text()}`);
+  return await r.json();
+}
+
+async function airtableDelete(table, recordId) {
+  const r = await fetch(`${API_BASE}/${encodeURIComponent(table)}/${recordId}`, {
+    method: 'DELETE', headers
+  });
+  if (!r.ok) throw new Error(`Delete ${table} failed: ${r.status}`);
+}
+
+/* =====================================================================
+   LAZY ACTIONS FETCHER
+   Actions are fetched on demand the first time any activity panel opens.
+   Subsequent calls return immediately from the cache. Concurrent calls
+   share a single in-flight promise so we never fetch twice.
+===================================================================== */
+async function ensureActionsLoaded() {
+  if (allActions !== null) return allActions;
+  if (actionsLoadingPromise) return actionsLoadingPromise;
+  actionsLoadingPromise = (async () => {
+    try {
+      const recs = await airtableList(TBL_ACTIONS);
+      allActions = recs;
+    } catch (err) {
+      console.warn('Failed to load Actions:', err);
+      allActions = [];   // cache empty array so we don't keep retrying
+    } finally {
+      actionsLoadingPromise = null;
+    }
+    return allActions;
+  })();
+  return actionsLoadingPromise;
+}
+
+// Returns Actions linked to a given Task (activity) record id.
+// Each Action's `Task` field is a linked record (array of record ids).
+function actionsForTask(taskRecordId) {
+  if (!allActions || !taskRecordId) return [];
+  return allActions.filter(a => {
+    const taskIds = a.fields.Task;
+    if (!Array.isArray(taskIds)) return false;
+    return taskIds.includes(taskRecordId);
+  });
+}
+
+/* =====================================================================
+   NODE BUILDERS
+===================================================================== */
+function buildNodeFromActividad(rec, posX, posY) {
+  const f = rec.fields;
+  const status = f.Status || '〇';
+  const task = f.Task || f.Name || f.Actividad || f.Title || '(sin nombre)';
+  const alert = (f.Alert || '').trim();
+  const areaId = pAreaIds(f.pArea)[0] || '';
+  const areaName = pAreaPrimaryName(f.pArea) || '';
+  return {
+    nodeType:        'actividad',
+    sourceTable:     TBL_ACTIVIDADES,
+    sourceRecordId:  rec.id,
+    label:           formatActivityLabel(task, areaName),
+    posX, posY,
+    statusForDisplay: status,
+    alertText:        alert,
+    areaId:           areaId,    // used by the area filter — empty string means "no area"
+    areaName:         areaName,  // used by the afterDrawing overlay to paint a chip
+    taskName:         task       // raw task without area, useful for re-rendering
+  };
+}
+
+// The visible label. The area is NOT part of the text label — it's painted
+// separately by drawAreaChip() as a styled overlay (white pill, smaller
+// font, status-colored text). When an area exists, we prepend a newline so
+// vis-network reserves space at the top of the node where the chip will go.
+function formatActivityLabel(task, areaName) {
+  if (!areaName) return task;
+  return `\n${task}`;
+}
+
+function buildNodeFromCotizacion(rec, posX, posY) {
+  const f = rec.fields;
+  const name = f.Name || f.Title || f.Vendor || '(cotización)';
+  const label = formatCotizacionLabel(name, f.Amount);
+  return {
+    nodeType:        'cotizacion',
+    sourceTable:     TBL_COTIZACIONES,
+    sourceRecordId:  rec.id,
+    label:           label,
+    posX, posY,
+    statusForDisplay: (f.Status || '').toString()    // raw "🟢 Aprobada" string
+  };
+}
+
+// Cotización node label = name on line 1, formatted COP amount on line 2.
+// Amount line is omitted when missing/zero so the node stays clean.
+function formatCotizacionLabel(name, amount) {
+  const num = Number(amount);
+  if (!amount || isNaN(num) || num === 0) return name;
+  const formatted = new Intl.NumberFormat('es-CO', {
+    style: 'currency', currency: 'COP', maximumFractionDigits: 0
+  }).format(num);
+  return `${name}\n${formatted}`;
+}
+
+function buildNodeFromCorte(rec, posX, posY) {
+  const f = rec.fields;
+  // Cortes (Partidas) — try common BOQ-style fields from our previous build
+  const item = f.item || f.CONCEPTO || f.descripcion || f.Name || '';
+  const ubic = f.UBICACION || '';
+  const label = ubic ? `${item} · ${ubic}` : (item || '(corte)');
+  return {
+    nodeType:        'partida',
+    sourceTable:     TBL_CORTES,
+    sourceRecordId:  rec.id,
+    label:           label.length > 60 ? label.slice(0, 57) + '…' : label,
+    posX, posY
+  };
+}
+
+function buildNodeFromArea(rec, posX, posY) {
+  const f = rec.fields;
+  const label = f.Name || f.Area || f.Title || f.UBICACION || '(área)';
+  return {
+    nodeType:        'area',
+    sourceTable:     TBL_AREAS,
+    sourceRecordId:  rec.id,
+    label:           label,
+    posX, posY
+  };
+}
+
+function visNodeFor(nodeData, visId) {
+  const shape = SHAPE_BY_TYPE[nodeData.nodeType] || 'box';
+  let bg, border;
+
+  if (nodeData.nodeType === 'actividad' && nodeData.statusForDisplay) {
+    // Activities — color by status emoji
+    bg = COLOR_BY_STATUS[nodeData.statusForDisplay] || DEFAULT_COLOR_BY_TYPE.actividad;
+  } else if (nodeData.nodeType === 'cotizacion') {
+    // Cotizaciones — color by status emoji extracted from the "🟢 Aprobada" string.
+    // No status = gray (mirrors the '〇 sin estado' convention from activities).
+    const emoji = nodeData.statusForDisplay
+      ? extractEmojiPrefix(nodeData.statusForDisplay)
+      : '';
+    bg = emoji ? (COLOR_BY_STATUS[emoji] || '#9ca3af') : '#9ca3af';
+  } else if (nodeData.color) {
+    bg = nodeData.color;
+  } else {
+    bg = DEFAULT_COLOR_BY_TYPE[nodeData.nodeType] || '#6b7280';
+  }
+  border = darken(bg, 25);
+
+  // Tooltip — for activities, show the Alert text if present
+  let title;
+  if (nodeData.nodeType === 'actividad' && nodeData.alertText) {
+    title = '⚠ Alerta: ' + nodeData.alertText;
+  }
+
+  // Current-week detection for milestones (hitos). If the label parses to a
+  // week number that matches the computed current week, scale the node up.
+  const isCurrentWeekHito =
+    nodeData.nodeType === 'milestone' &&
+    CURRENT_WEEK !== null &&
+    extractWeekNumber(nodeData.label) === CURRENT_WEEK;
+
+  // Temporal coloring for week-numbered hitos. Hitos without a parseable
+  // week number (e.g. "Permits approved", "Demo completo") and hitos from
+  // other phases keep the default amber so they aren't accidentally grayed.
+  //
+  // Countdown convention: past = HIGHER numbers (we're done counting through
+  // them, gray them out). Future = LOWER numbers (active/upcoming, amber).
+  if (nodeData.nodeType === 'milestone' && !nodeData.color) {
+    const w = extractWeekNumber(nodeData.label);
+    if (w !== null && CURRENT_WEEK !== null) {
+      if (w > CURRENT_WEEK) {
+        bg = '#9ca3af';        // past weeks (already counted past) — gray, 'done with that'
+      } else if (w === CURRENT_WEEK) {
+        bg = '#fbbf24';        // current week — bright amber-400, more saturated than default
+      }
+      // future weeks (w < CURRENT_WEEK, including Semana 0) fall through to
+      // the default amber-500 — 'this is what's active / what's ahead'
+    }
+    border = darken(bg, 25);
+  }
+
+  // Sizes — default 22 for text-outside shapes, 38 if this is the current week hito.
+  const outsideSize = isCurrentWeekHito ? 38 : 22;
+  // Label font scales similarly so the bigger hito's label is also bigger.
+  const fontSize = isCurrentWeekHito ? 16 : 13;
+
+  return {
+    id: visId,
+    label: nodeData.label,
+    shape: shape,
+    title: title,
+    color: { background: bg, border: border, highlight: { background: bg, border: '#111' } },
+    font: {
+      color: isTextInsideShape(shape) ? '#fff' : '#1f2937',
+      face: '-apple-system, "Segoe UI", sans-serif',
+      size: fontSize,
+      bold: { color: isTextInsideShape(shape) ? '#fff' : '#1f2937' },
+      multi: false
+    },
+    x: nodeData.posX,
+    y: nodeData.posY,
+    margin: 10,
+    // Uniform sizing for text-inside shapes — same width regardless of label length.
+    // Text-outside shapes (triangle, star, diamond, hexagon) use the `size` property.
+    // The current-week hito uses an enlarged size so it visibly stands out.
+    widthConstraint:  isTextInsideShape(shape) ? { minimum: 140, maximum: 140 } : undefined,
+    heightConstraint: isTextInsideShape(shape) ? { minimum: 44 } : undefined,
+    size: isTextInsideShape(shape) ? undefined : outsideSize,
+    // Honor active filters — if user has filtered out this type or
+    // (for activities) this area, the new node starts hidden.
+    hidden: shouldStartHidden(nodeData),
+    _data: nodeData     // attach for later access
+  };
+}
+
+function shouldStartHidden(nodeData) {
+  if (visibleTypes && !visibleTypes.has(nodeData.nodeType)) return true;
+  if (nodeData.nodeType === 'actividad' && visibleAreas) {
+    const key = nodeData.areaId || NO_AREA_KEY;
+    if (!visibleAreas.has(key)) return true;
+  }
+  if (nodeData.nodeType === 'actividad' && visibleStatuses) {
+    const s = nodeData.statusForDisplay || '〇';
+    if (!visibleStatuses.has(s)) return true;
+  }
+  if (nodeData.nodeType === 'cotizacion' && visibleCotizStatuses && nodeData.sourceRecordId) {
+    const rec = allCotizaciones.find(c => c.id === nodeData.sourceRecordId);
+    const emoji = rec ? extractEmojiPrefix(rec.fields.Status) : '';
+    // If no emoji status, treat it as "no filter applies" (always show)
+    if (emoji && !visibleCotizStatuses.has(emoji)) return true;
+  }
+  return false;
+}
+
+// vis-network shapes that render their label INSIDE the shape (and therefore
+// auto-size to fit the text). The other shapes show the label below.
+function isTextInsideShape(shape) {
+  return ['box', 'ellipse', 'circle', 'database'].includes(shape);
+}
+
+function darken(hex, pct) {
+  const h = hex.replace('#','');
+  const r = Math.max(0, parseInt(h.substring(0,2),16) - pct);
+  const g = Math.max(0, parseInt(h.substring(2,4),16) - pct);
+  const b = Math.max(0, parseInt(h.substring(4,6),16) - pct);
+  return '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0')).join('');
+}
+
+/* =====================================================================
+   pArea LINKED-RECORD HELPERS
+   pArea is a Linked Record field pointing to Project Areas. Airtable
+   returns it as an array of record IDs (e.g. ['recXXX']). To display
+   the human-readable area name we resolve against the allAreas cache.
+===================================================================== */
+function pAreaIds(val) {
+  if (!val) return [];
+  const arr = Array.isArray(val) ? val : [val];
+  return arr.map(v => (typeof v === 'object' && v !== null ? v.id : v)).filter(Boolean);
+}
+
+function pAreaNames(val) {
+  return pAreaIds(val).map(id => {
+    const found = allAreas.find(a => a.id === id);
+    return found ? (found.fields.Name || '') : '';
+  }).filter(Boolean);
+}
+
+function pAreaPrimaryId(val) {
+  const ids = pAreaIds(val);
+  return ids[0] || '';
+}
+
+function pAreaPrimaryName(val) {
+  const names = pAreaNames(val);
+  return names[0] || '';
+}
+
+// Returns the Order field from Project Areas for sorting; missing -> very high
+function areaOrder(areaId) {
+  const a = allAreas.find(x => x.id === areaId);
+  return a && a.fields && (a.fields.Order ?? a.fields.order) != null
+    ? Number(a.fields.Order ?? a.fields.order)
+    : 9999;
+}
+
+/* =====================================================================
+   STATUS ICON & ALERT BADGE — drawn directly on canvas as overlays
+   These mirror the SVG status icons used in the main Actividades app:
+   filled colored circle with a white symbol inside (stop/pause/play/check)
+   plus the dashed circle with × for deprecated.
+   Coordinates passed in are TOP-RIGHT corner for status, TOP-LEFT for alert.
+===================================================================== */
+function drawStatusIcon(ctx, status, rightX, topY, size) {
+  // We anchor at top-right and draw leftward so the icon sits at the
+  // node's outer edge regardless of size variation.
+  const r = size / 2;
+  const cx = rightX - r;
+  const cy = topY + r;
+
+  ctx.save();
+
+  if (status === '〇') {
+    // Deprecated — dashed gray circle with gray ×
+    ctx.strokeStyle = '#9ca3af';
+    ctx.lineWidth = 1.5;
+    ctx.fillStyle = '#fafbfc';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r - 0.5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // ×
+    const xPad = size * 0.30;
+    ctx.strokeStyle = '#6b7280';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - r + xPad, cy - r + xPad);
+    ctx.lineTo(cx + r - xPad, cy + r - xPad);
+    ctx.moveTo(cx + r - xPad, cy - r + xPad);
+    ctx.lineTo(cx - r + xPad, cy + r - xPad);
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+
+  // Filled circle background by status color
+  const bg = COLOR_BY_STATUS[status] || '#9ca3af';
+  ctx.fillStyle = bg;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Inner symbol — always white
+  ctx.fillStyle = '#fff';
+
+  if (status === '🔴') {
+    // Stop square
+    const sq = size * 0.42;
+    ctx.fillRect(cx - sq/2, cy - sq/2, sq, sq);
+  } else if (status === '🟡') {
+    // Pause — two bars
+    const bw = size * 0.13;
+    const bh = size * 0.44;
+    const gap = size * 0.12;
+    ctx.fillRect(cx - gap/2 - bw, cy - bh/2, bw, bh);
+    ctx.fillRect(cx + gap/2,      cy - bh/2, bw, bh);
+  } else if (status === '🟢') {
+    // Play — equilateral triangle pointing right
+    const th = size * 0.46;
+    const tw = th * 0.866;
+    const tx = cx - tw/2 + size * 0.04;
+    const ty = cy - th/2;
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(tx, ty + th);
+    ctx.lineTo(tx + tw, ty + th/2);
+    ctx.closePath();
+    ctx.fill();
+  } else if (status === '🔵') {
+    // Checkmark
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.22, cy + size * 0.02);
+    ctx.lineTo(cx - size * 0.05, cy + size * 0.20);
+    ctx.lineTo(cx + size * 0.24, cy - size * 0.18);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawAlertBadge(ctx, leftX, topY, size) {
+  // Yellow warning triangle with white "!" inside.
+  // Anchor at top-left and draw rightward.
+  const r = size / 2;
+  const cx = leftX + r;
+  const cy = topY + r;
+
+  ctx.save();
+
+  // Soft white halo so the badge stands out on any node color
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + 1, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Triangle
+  const th = size * 0.78;
+  const tw = th * 1.05;
+  const tx = cx - tw/2;
+  const ty = cy - th/2 + 1;
+  ctx.fillStyle = '#f59e0b';
+  ctx.strokeStyle = '#92400e';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(tx + tw/2, ty);
+  ctx.lineTo(tx + tw, ty + th);
+  ctx.lineTo(tx, ty + th);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Exclamation mark
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${Math.round(size * 0.6)}px -apple-system, "Segoe UI", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('!', cx, cy + 1);
+
+  ctx.restore();
+}
+
+/* =====================================================================
+   AREA CHIP — small white pill rendered near the top of activity nodes.
+   Text is uppercase, smaller than the main label, painted in the activity's
+   status color so the area subtly reinforces status without competing.
+   The chip sits between the alert badge (top-left) and the status icon
+   (top-right), centered on the node's horizontal axis.
+===================================================================== */
+function drawAreaChip(ctx, areaName, statusEmoji, bbox) {
+  if (!areaName) return;
+
+  ctx.save();
+
+  const FONT_SIZE = 9;
+  const PAD_X = 6;
+  const PAD_Y = 2;
+  const FONT = `700 ${FONT_SIZE}px -apple-system, "Segoe UI", sans-serif`;
+
+  // Pick text color from status. Deprecated activities use a muted gray so
+  // the chip doesn't shout when the activity itself is grayed out elsewhere.
+  let textColor;
+  if (statusEmoji === '〇') {
+    textColor = '#6b7280';
+  } else {
+    textColor = COLOR_BY_STATUS[statusEmoji] || '#374151';
+  }
+
+  // Measure text and budget the chip width. Node is 140px wide; the alert
+  // badge and status icon each occupy ~22px in the corners. Reserve a safe
+  // 96px max for the chip so they never overlap.
+  ctx.font = FONT;
+  const upper = areaName.toUpperCase();
+  let displayText = upper;
+  const MAX_CHIP_WIDTH = 96;
+  let textWidth = ctx.measureText(displayText).width;
+
+  // Truncate with ellipsis if too long
+  if (textWidth + PAD_X * 2 > MAX_CHIP_WIDTH) {
+    while (displayText.length > 2 && ctx.measureText(displayText + '…').width + PAD_X * 2 > MAX_CHIP_WIDTH) {
+      displayText = displayText.slice(0, -1);
+    }
+    displayText += '…';
+    textWidth = ctx.measureText(displayText).width;
+  }
+
+  const chipW = textWidth + PAD_X * 2;
+  const chipH = FONT_SIZE + PAD_Y * 2 + 2;
+  const cx = (bbox.left + bbox.right) / 2;
+  const chipX = cx - chipW / 2;
+  const chipY = bbox.top + 5;
+
+  // White pill with subtle border for separation against the colored node bg
+  drawRoundedRect(ctx, chipX, chipY, chipW, chipH, chipH / 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Status-colored text
+  ctx.fillStyle = textColor;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(displayText, cx, chipY + chipH / 2 + 0.5);
+
+  ctx.restore();
+}
+
+function drawRoundedRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+/* =====================================================================
+   INIT
+===================================================================== */
+async function init() {
+  showLoading(true);
+  try {
+    // Pre-fetch all source tables for the pickers
+    const [acts, cots, cortes, areas] = await Promise.all([
+      airtableList(TBL_ACTIVIDADES).catch(() => []),
+      airtableList(TBL_COTIZACIONES).catch(() => []),
+      airtableList(TBL_CORTES).catch(() => []),
+      airtableList(TBL_AREAS).catch(() => [])
+    ]);
+    allActividades = acts;
+    allCotizaciones = cots;
+    allCortes = cortes;
+    allAreas = areas;
+
+    // Fetch saved nodes and edges
+    const [savedNodes, savedEdges] = await Promise.all([
+      airtableList(TBL_NODES).catch((e) => { console.warn('GraphNodes empty/missing:', e); return []; }),
+      airtableList(TBL_EDGES).catch((e) => { console.warn('GraphEdges empty/missing:', e); return []; })
+    ]);
+
+    // Build vis DataSets
+    nodes = new vis.DataSet();
+    edges = new vis.DataSet();
+
+    let visIdCounter = 1;
+    const recIdToVisId = new Map();  // GraphNodes record id -> our visId
+
+    for (const rec of savedNodes) {
+      const f = rec.fields;
+      const visId = `n${visIdCounter++}`;
+      const nodeData = {
+        nodeType:       f.nodeType || 'custom',
+        sourceTable:    f.sourceTable || '',
+        sourceRecordId: f.sourceRecordId || '',
+        label:          f.label || '(sin etiqueta)',
+        posX:           f.posX ?? 0,
+        posY:           f.posY ?? 0,
+        color:          f.color || '',
+        notes:          f.notes || ''
+      };
+
+      // For activities, fetch fresh status from Actividades
+      if (nodeData.sourceTable === TBL_ACTIVIDADES && nodeData.sourceRecordId) {
+        const act = allActividades.find(a => a.id === nodeData.sourceRecordId);
+        if (act) {
+          nodeData.statusForDisplay = act.fields.Status || '〇';
+          const task = act.fields.Task || act.fields.Name || act.fields.Actividad || nodeData.label;
+          const areaName = pAreaPrimaryName(act.fields.pArea) || '';
+          nodeData.label = formatActivityLabel(task, areaName);
+          nodeData.alertText = (act.fields.Alert || '').trim();
+          nodeData.areaId = pAreaIds(act.fields.pArea)[0] || '';
+          nodeData.areaName = areaName;
+          nodeData.taskName = task;
+        }
+      } else if (nodeData.sourceTable === TBL_COTIZACIONES && nodeData.sourceRecordId) {
+        const cot = allCotizaciones.find(c => c.id === nodeData.sourceRecordId);
+        if (cot) {
+          const name = cot.fields.Name || cot.fields.Title || cot.fields.Vendor || nodeData.label;
+          nodeData.label = formatCotizacionLabel(name, cot.fields.Amount);
+          nodeData.statusForDisplay = (cot.fields.Status || '').toString();
+        }
+      } else if (nodeData.sourceTable === TBL_CORTES && nodeData.sourceRecordId) {
+        const corte = allCortes.find(c => c.id === nodeData.sourceRecordId);
+        if (corte) {
+          const f = corte.fields;
+          const item = f.item || f.CONCEPTO || f.descripcion || f.Name || '';
+          const ubic = f.UBICACION || '';
+          const fresh = ubic ? `${item} · ${ubic}` : (item || nodeData.label);
+          nodeData.label = fresh.length > 60 ? fresh.slice(0, 57) + '…' : fresh;
+        }
+      } else if (nodeData.sourceTable === TBL_AREAS && nodeData.sourceRecordId) {
+        const area = allAreas.find(a => a.id === nodeData.sourceRecordId);
+        if (area) {
+          const f = area.fields;
+          nodeData.label = f.Name || f.Area || f.Title || f.UBICACION || nodeData.label;
+        }
+      }
+
+      nodes.add(visNodeFor(nodeData, visId));
+      nodeAirtableId.set(visId, rec.id);
+      recIdToVisId.set(rec.id, visId);
+    }
+
+    let visEdgeCounter = 1;
+    for (const rec of savedEdges) {
+      const f = rec.fields;
+      const fromRecId = (f.fromNode && f.fromNode[0]) || null;
+      const toRecId   = (f.toNode && f.toNode[0]) || null;
+      if (!fromRecId || !toRecId) continue;
+      const fromVisId = recIdToVisId.get(fromRecId);
+      const toVisId   = recIdToVisId.get(toRecId);
+      if (!fromVisId || !toVisId) continue;
+
+      const edgeType = f.edgeType || 'depends_on';
+      const style = EDGE_STYLE[edgeType] || EDGE_STYLE.depends_on;
+      const visEdgeId = `e${visEdgeCounter++}`;
+      edges.add({
+        id: visEdgeId,
+        from: fromVisId,
+        to: toVisId,
+        label: f.label || '',
+        arrows: style.arrows,
+        dashes: style.dashes,
+        color: { color: style.color },
+        width: style.width || 1.5,
+        font: { size: 11, color: '#4b5563', strokeWidth: 3, strokeColor: '#fafbfc' },
+        _data: { edgeType, label: f.label || '' }
+      });
+      edgeAirtableId.set(visEdgeId, rec.id);
+    }
+
+    // Build the network
+    const container = document.getElementById('network');
+    const data = { nodes, edges };
+    const options = {
+      physics: { enabled: false },
+      interaction: {
+        dragNodes: true,
+        dragView: true,
+        zoomView: true,
+        multiselect: true,
+        hover: true,
+        tooltipDelay: 200
+      },
+      manipulation: {
+        enabled: false,    // we drive this manually via toolbar
+        addEdge: function(edgeData, callback) {
+          if (edgeData.from === edgeData.to) {
+            callback(null);
+            return;
+          }
+          pendingEdge = { ...edgeData, callback };
+          openEdgeModal();
+        }
+      },
+      nodes: {
+        borderWidth: 2,
+        shadow: { enabled: true, color: 'rgba(0,0,0,0.1)', size: 6, x: 0, y: 2 }
+      },
+      edges: {
+        smooth: { type: 'cubicBezier', forceDirection: 'horizontal', roundness: 0.4 }
+      }
+    };
+    network = new vis.Network(container, data, options);
+
+    // Track drag-end as a position change
+    network.on('dragEnd', (params) => {
+      if (params.nodes && params.nodes.length) {
+        const positions = network.getPositions(params.nodes);
+        for (const visId of params.nodes) {
+          const node = nodes.get(visId);
+          if (!node) continue;
+          node._data.posX = positions[visId].x;
+          node._data.posY = positions[visId].y;
+          markNodeDirty(visId);
+        }
+      }
+    });
+
+    // Paint corner overlays on every render: status icon (top-right) and
+    // alert badge (top-left) for activity nodes that have those fields.
+    network.on('afterDrawing', (ctx) => {
+      nodes.forEach((node) => {
+        if (!node._data || node._data.nodeType !== 'actividad') return;
+        // Don't draw overlays on hidden nodes — the type filter or any
+        // other code that sets `hidden: true` should suppress these too.
+        if (node.hidden === true) return;
+        const bbox = network.getBoundingBox(node.id);
+        if (!bbox) return;
+
+        // Status icon — top-right corner
+        if (node._data.statusForDisplay) {
+          drawStatusIcon(ctx, node._data.statusForDisplay, bbox.right - 6, bbox.top + 6, 16);
+        }
+
+        // Alert badge — top-left corner
+        if (node._data.alertText) {
+          drawAlertBadge(ctx, bbox.left + 6, bbox.top + 6, 16);
+        }
+
+        // Area chip — small white pill near the top of the node, between
+        // the alert badge and status icon. Text is painted in the activity's
+        // status color so the area subtly reinforces the status.
+        if (node._data.areaName) {
+          drawAreaChip(ctx, node._data.areaName, node._data.statusForDisplay, bbox);
+        }
+      });
+    });
+
+    // Right-click / long-press for context menu — checks node first, then edge
+    network.on('oncontext', (params) => {
+      params.event.preventDefault();
+      const nodeId = network.getNodeAt(params.pointer.DOM);
+      if (nodeId) {
+        ctxNodeId = nodeId;
+        ctxEdgeId = null;
+        showNodeContextMenu(params.event.clientX, params.event.clientY);
+        return;
+      }
+      const edgeId = network.getEdgeAt(params.pointer.DOM);
+      if (edgeId) {
+        ctxEdgeId = edgeId;
+        ctxNodeId = null;
+        showEdgeContextMenu(params.event.clientX, params.event.clientY);
+      }
+    });
+
+    // Double-click a node to open the detail panel
+    network.on('doubleClick', (params) => {
+      if (params.nodes && params.nodes.length) {
+        openDetailPanel(params.nodes[0]);
+      }
+    });
+
+    // Shift+drag lasso — multi-select nodes inside a rubber-band rectangle
+    setupLassoSelection();
+
+    // Hide context menu on any other click
+    document.addEventListener('click', hideContextMenu);
+
+    updateEmptyState();
+    updateSaveStatus();
+    updateWeekPill();
+    buildAreaChips();
+    updateFilterBadge();
+  } catch (err) {
+    console.error(err);
+    showToast('Error al cargar: ' + err.message, 'error');
+  } finally {
+    showLoading(false);
+  }
+}
+
+/* =====================================================================
+   ADD NODES — pickers and free-form
+===================================================================== */
+function openPicker(type) {
+  pickerType = type;
+  const titles = {
+    actividad:  'Añadir Actividad',
+    cotizacion: 'Añadir Cotización',
+    partida:    'Añadir Corte',
+    area:       'Añadir Área'
+  };
+  document.getElementById('picker-title').textContent = titles[type] || 'Seleccionar';
+  document.getElementById('picker-search').value = '';
+  renderPicker('');
+  document.getElementById('picker-modal').classList.add('show');
+  setTimeout(() => document.getElementById('picker-search').focus(), 50);
+}
+
+function closePicker() {
+  document.getElementById('picker-modal').classList.remove('show');
+  pickerType = null;
+}
+
+function filterPicker() {
+  const q = document.getElementById('picker-search').value.toLowerCase();
+  renderPicker(q);
+}
+
+function renderPicker(query) {
+  const body = document.getElementById('picker-body');
+
+  let list;
+  if (pickerType === 'actividad')      list = allActividades;
+  else if (pickerType === 'cotizacion') list = allCotizaciones;
+  else if (pickerType === 'partida')    list = allCortes;
+  else if (pickerType === 'area')       list = allAreas;
+  else list = [];
+
+  // Determine which sourceRecordIds are already on the canvas
+  const onCanvas = new Set();
+  nodes.forEach(n => {
+    if (n._data && n._data.sourceRecordId) onCanvas.add(n._data.sourceRecordId);
+  });
+
+  const items = list.map(rec => {
+    const f = rec.fields;
+    let name = '', meta = '', status = '';
+
+    if (pickerType === 'actividad') {
+      name = f.Task || f.Name || f.Actividad || f.Title || '(sin nombre)';
+      status = f.Status || '〇';
+      meta = pAreaPrimaryName(f.pArea) || f.Area || f.UBICACION || '';
+    } else if (pickerType === 'cotizacion') {
+      name = f.Name || f.Title || f.Vendor || '(cotización)';
+      status = f.Status || '';
+      const amt = f.Amount ? new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(f.Amount) : '';
+      const grp = (f.Group || '').trim();
+      meta = [grp, amt].filter(Boolean).join(' · ');
+    } else if (pickerType === 'partida') {
+      const item = f.item || f.CONCEPTO || f.descripcion || f.Name || '';
+      name = item || '(corte)';
+      const ubic = f.UBICACION || '';
+      const type = f.type || '';
+      meta = [ubic, type].filter(Boolean).join(' · ');
+    } else if (pickerType === 'area') {
+      name = f.Name || f.Area || f.Title || f.UBICACION || '(área)';
+      meta = '';
+    }
+
+    return { rec, name, status, meta, alreadyOnCanvas: onCanvas.has(rec.id) };
+  }).filter(it => !query || it.name.toLowerCase().includes(query) || it.meta.toLowerCase().includes(query));
+
+  if (!items.length) {
+    body.innerHTML = '<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;">Sin resultados</div>';
+    return;
+  }
+
+  // For Actividades: group by pArea (in Project Areas Order), sort by createdTime asc within each group.
+  // For Cotizaciones: group by Group field (free text — HVAC, GAS, etc.), sort by createdTime within each.
+  // For all other pickers: render flat.
+  if (pickerType === 'actividad') {
+    body.innerHTML = renderActivityPickerGrouped(items);
+  } else if (pickerType === 'cotizacion') {
+    body.innerHTML = renderCotizPickerGrouped(items);
+  } else {
+    body.innerHTML = items.map(renderPickerRow).join('');
+  }
+}
+
+function renderPickerRow(it) {
+  // Status indicator: prefer the actual emoji (matches main app's list style for both
+  // Actividades and Cotizaciones), fall back to a colored dot if the value isn't a known emoji.
+  let statusHtml = '<span class="picker-item-status-spacer"></span>';
+  if (it.status) {
+    const knownEmoji = ['🔴','🟡','🟢','🔵','〇'].includes(it.status);
+    if (knownEmoji) {
+      statusHtml = `<span class="picker-item-status-emoji">${it.status}</span>`;
+    } else {
+      statusHtml = `<span class="picker-item-status" style="background:${COLOR_BY_STATUS[it.status] || '#9ca3af'}"></span>`;
+    }
+  }
+  return `
+    <div class="picker-item ${it.alreadyOnCanvas ? 'disabled' : ''}"
+         ${!it.alreadyOnCanvas ? `onclick="addFromPicker('${it.rec.id}')"` : ''}>
+      ${statusHtml}
+      <div class="picker-item-text">
+        <div class="picker-item-name">${escapeHtml(it.name)}</div>
+        ${it.meta ? `<div class="picker-item-meta">${escapeHtml(it.meta)}</div>` : ''}
+      </div>
+      ${it.alreadyOnCanvas ? '<span class="picker-item-added">en grafo</span>' : ''}
+    </div>
+  `;
+}
+
+function renderActivityPickerGrouped(items) {
+  // Bucket by pArea record ID (or '' for unassigned)
+  const buckets = new Map();   // areaId -> { name, order, items: [] }
+
+  // Pre-seed all areas in their declared Order so empty groups still appear
+  // in the right relative order if any item drops in later.
+  const areasSorted = [...allAreas].sort((a, b) => {
+    const oa = (a.fields.Order ?? a.fields.order ?? 9999);
+    const ob = (b.fields.Order ?? b.fields.order ?? 9999);
+    return oa - ob || (a.fields.Name || '').localeCompare(b.fields.Name || '');
+  });
+  for (const a of areasSorted) {
+    buckets.set(a.id, {
+      name: a.fields.Name || '(sin nombre)',
+      order: Number(a.fields.Order ?? a.fields.order ?? 9999),
+      items: []
+    });
+  }
+
+  // Drop each item into its bucket
+  for (const it of items) {
+    const f = it.rec.fields;
+    const ids = pAreaIds(f.pArea);
+    const areaId = ids[0] || '__no_area__';
+    if (!buckets.has(areaId)) {
+      buckets.set(areaId, {
+        name: areaId === '__no_area__' ? 'Sin área' : '(área desconocida)',
+        order: 99999,   // unassigned sinks to the bottom
+        items: []
+      });
+    }
+    buckets.get(areaId).items.push(it);
+  }
+
+  // Sort within each bucket by createdTime ascending (matches main app's "line number")
+  for (const b of buckets.values()) {
+    b.items.sort((x, y) => {
+      const tx = x.rec.createdTime || '';
+      const ty = y.rec.createdTime || '';
+      return tx.localeCompare(ty);
+    });
+  }
+
+  // Drop empty buckets, then emit grouped HTML
+  const groups = [...buckets.values()]
+    .filter(b => b.items.length > 0)
+    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+
+  return groups.map(g => `
+    <div class="picker-group-header">
+      <span class="picker-group-name">${escapeHtml(g.name)}</span>
+      <span class="picker-group-count">${g.items.length}</span>
+    </div>
+    ${g.items.map(renderPickerRow).join('')}
+  `).join('');
+}
+
+function renderCotizPickerGrouped(items) {
+  // Bucket by Group (free-text field — HVAC, GAS, Estructura, Mobiliario, etc.)
+  // Empty/missing Group goes to "Sin grupo" which sorts to the end.
+  const buckets = new Map();   // groupName -> items[]
+  for (const it of items) {
+    const g = (it.rec.fields.Group || '').trim();
+    const key = g || '__no_group__';
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(it);
+  }
+
+  // Sort within each bucket by createdTime ascending (oldest first — same as Actividades)
+  for (const arr of buckets.values()) {
+    arr.sort((x, y) => {
+      const tx = x.rec.createdTime || '';
+      const ty = y.rec.createdTime || '';
+      return tx.localeCompare(ty);
+    });
+  }
+
+  // Order groups: alphabetical, with "Sin grupo" forced to the bottom
+  const groups = [...buckets.entries()]
+    .map(([key, arr]) => ({
+      key,
+      name: key === '__no_group__' ? 'Sin grupo' : key,
+      sortKey: key === '__no_group__' ? '\uFFFF' : key.toLowerCase(),
+      items: arr
+    }))
+    .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
+  return groups.map(g => `
+    <div class="picker-group-header">
+      <span class="picker-group-name">${escapeHtml(g.name)}</span>
+      <span class="picker-group-count">${g.items.length}</span>
+    </div>
+    ${g.items.map(renderPickerRow).join('')}
+  `).join('');
+}
+
+function addFromPicker(recordId) {
+  let list, builder;
+  if (pickerType === 'actividad')      { list = allActividades; builder = buildNodeFromActividad; }
+  else if (pickerType === 'cotizacion'){ list = allCotizaciones; builder = buildNodeFromCotizacion; }
+  else if (pickerType === 'partida')   { list = allCortes;       builder = buildNodeFromCorte; }
+  else if (pickerType === 'area')      { list = allAreas;        builder = buildNodeFromArea; }
+  else return;
+
+  const rec = list.find(r => r.id === recordId);
+  if (!rec) return;
+
+  // Place at center of viewport
+  const center = network.getViewPosition();
+  const offset = (Math.random() - 0.5) * 100;
+  const posX = center.x + offset;
+  const posY = center.y + offset;
+
+  const nodeData = builder(rec, posX, posY);
+
+  const visId = `nlocal_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+  nodes.add(visNodeFor(nodeData, visId));
+  markNodeDirty(visId);
+  closePicker();
+  updateEmptyState();
+  showToast(`Añadido: ${nodeData.label}`, 'success');
+}
+
+function openFreeform(type) {
+  freeformType = type;
+  const titles = {
+    milestone: 'Nuevo Hito',
+    decision:  'Nueva Decisión',
+    custom:    'Nuevo Nodo Personalizado'
+  };
+  document.getElementById('freeform-title').textContent = titles[type];
+  document.getElementById('freeform-label').value = '';
+  document.getElementById('freeform-notes').value = '';
+  document.getElementById('freeform-modal').classList.add('show');
+  setTimeout(() => document.getElementById('freeform-label').focus(), 50);
+}
+
+function closeFreeform() {
+  document.getElementById('freeform-modal').classList.remove('show');
+  freeformType = null;
+}
+
+function confirmFreeform() {
+  const label = document.getElementById('freeform-label').value.trim();
+  if (!label) { showToast('Etiqueta requerida', 'error'); return; }
+  const notes = document.getElementById('freeform-notes').value.trim();
+
+  const center = network.getViewPosition();
+  const offset = (Math.random() - 0.5) * 80;
+
+  const nodeData = {
+    nodeType:       freeformType,
+    sourceTable:    '',
+    sourceRecordId: '',
+    label:          label,
+    posX:           center.x + offset,
+    posY:           center.y + offset,
+    color:          '',
+    notes:          notes
+  };
+
+  const visId = `nlocal_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+  nodes.add(visNodeFor(nodeData, visId));
+  markNodeDirty(visId);
+  closeFreeform();
+  updateEmptyState();
+  showToast(`Añadido: ${label}`, 'success');
+}
+
+/* =====================================================================
+   EDGE CREATION
+===================================================================== */
+function toggleEdgeMode() {
+  edgeMode = !edgeMode;
+  const btn = document.getElementById('edge-mode-btn');
+  if (edgeMode) {
+    network.addEdgeMode();
+    btn.style.background = '#111827';
+    btn.style.color = '#fff';
+    showToast('Arrastra de un nodo a otro para conectar', 'success');
+  } else {
+    network.disableEditMode();
+    btn.style.background = '';
+    btn.style.color = '';
+  }
+}
+
+function openEdgeModal() {
+  document.getElementById('edge-type-select').value = 'depends_on';
+  document.getElementById('edge-label').value = '';
+  document.getElementById('edge-modal').classList.add('show');
+}
+
+function closeEdgeModal() {
+  document.getElementById('edge-modal').classList.remove('show');
+}
+
+function cancelEdgeCreation() {
+  if (pendingEdge && pendingEdge.callback) pendingEdge.callback(null);
+  pendingEdge = null;
+  closeEdgeModal();
+  // Stay in edge mode for further edges if user wants
+  if (edgeMode) network.addEdgeMode();
+}
+
+function confirmEdgeCreation() {
+  if (!pendingEdge) return;
+  const edgeType = document.getElementById('edge-type-select').value;
+  const label = document.getElementById('edge-label').value.trim();
+  const style = EDGE_STYLE[edgeType] || EDGE_STYLE.depends_on;
+
+  const visEdgeId = `elocal_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+  const newEdge = {
+    id: visEdgeId,
+    from: pendingEdge.from,
+    to: pendingEdge.to,
+    label: label,
+    arrows: style.arrows,
+    dashes: style.dashes,
+    color: { color: style.color },
+    width: style.width || 1.5,
+    font: { size: 11, color: '#4b5563', strokeWidth: 3, strokeColor: '#fafbfc' },
+    _data: { edgeType, label }
+  };
+  // Don't use the manipulation callback (it adds with vis-generated id) — add manually
+  if (pendingEdge.callback) pendingEdge.callback(null);
+  edges.add(newEdge);
+  markEdgeDirty(visEdgeId);
+
+  pendingEdge = null;
+  closeEdgeModal();
+  if (edgeMode) network.addEdgeMode();
+}
+
+/* =====================================================================
+   CONTEXT MENU — separate menus for nodes and edges
+===================================================================== */
+function showNodeContextMenu(x, y) {
+  hideContextMenu();   // belt-and-suspenders: ensure edge menu is closed
+  const menu = document.getElementById('ctx-menu');
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  menu.classList.add('show');
+
+  // Hide "open source" if no source link
+  const node = nodes.get(ctxNodeId);
+  const hasSource = node && node._data && node._data.sourceRecordId;
+  menu.children[0].style.display = hasSource ? 'flex' : 'none';
+}
+
+function showEdgeContextMenu(x, y) {
+  hideContextMenu();   // ensure node menu is closed
+  const menu = document.getElementById('ctx-edge-menu');
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  menu.classList.add('show');
+}
+
+function hideContextMenu() {
+  document.getElementById('ctx-menu').classList.remove('show');
+  const em = document.getElementById('ctx-edge-menu');
+  if (em) em.classList.remove('show');
+}
+
+function ctxAction(action) {
+  if (!ctxNodeId) return;
+  const node = nodes.get(ctxNodeId);
+  hideContextMenu();
+
+  if (action === 'open-source' && node._data.sourceRecordId) {
+    const url = `https://airtable.com/${AIRTABLE_BASE_ID}/${encodeURIComponent(node._data.sourceTable)}/${node._data.sourceRecordId}`;
+    window.open(url, '_blank');
+  } else if (action === 'edit-label') {
+    const newLabel = prompt('Nueva etiqueta:', node.label);
+    if (newLabel && newLabel.trim()) {
+      node._data.label = newLabel.trim();
+      // Rebuild via visNodeFor so size/font update for hitos crossing the
+      // current-week threshold. Preserve the position from the live node.
+      const positions = network.getPositions([ctxNodeId]);
+      if (positions[ctxNodeId]) {
+        node._data.posX = positions[ctxNodeId].x;
+        node._data.posY = positions[ctxNodeId].y;
+      }
+      const rebuilt = visNodeFor(node._data, ctxNodeId);
+      nodes.update(rebuilt);
+      markNodeDirty(ctxNodeId);
+    }
+  } else if (action === 'delete') {
+    if (!confirm(`¿Eliminar "${node.label}"?\n(Las conexiones a este nodo también se eliminarán)`)) return;
+
+    // Mark connected edges for deletion
+    const connectedEdgeIds = network.getConnectedEdges(ctxNodeId);
+    for (const eid of connectedEdgeIds) {
+      const airId = edgeAirtableId.get(eid);
+      if (airId) deletedEdgeAirtableIds.push(airId);
+      edges.remove(eid);
+      edgeAirtableId.delete(eid);
+      dirtyEdges.delete(eid);
+    }
+
+    // Mark the node for deletion
+    const airId = nodeAirtableId.get(ctxNodeId);
+    if (airId) deletedNodeAirtableIds.push(airId);
+    nodes.remove(ctxNodeId);
+    nodeAirtableId.delete(ctxNodeId);
+    dirtyNodes.delete(ctxNodeId);
+
+    updateEmptyState();
+    updateSaveStatus();
+    showToast('Nodo eliminado', 'success');
+  }
+  ctxNodeId = null;
+}
+
+function ctxEdgeAction(action) {
+  if (!ctxEdgeId) return;
+  const edge = edges.get(ctxEdgeId);
+  hideContextMenu();
+
+  if (!edge) { ctxEdgeId = null; return; }
+
+  if (action === 'delete') {
+    // No confirmation — matches user's preference for fast deletion.
+    // The actual Airtable DELETE happens on next Save.
+    const airId = edgeAirtableId.get(ctxEdgeId);
+    if (airId) deletedEdgeAirtableIds.push(airId);
+    edges.remove(ctxEdgeId);
+    edgeAirtableId.delete(ctxEdgeId);
+    dirtyEdges.delete(ctxEdgeId);
+    updateSaveStatus();
+    showToast('Conexión eliminada', 'success');
+  } else if (action === 'edit-label') {
+    const current = (edge._data && edge._data.label) || edge.label || '';
+    const newLabel = prompt('Etiqueta de la conexión:', current);
+    if (newLabel === null) { ctxEdgeId = null; return; }   // cancelled
+    const trimmed = newLabel.trim();
+    edge._data = edge._data || {};
+    edge._data.label = trimmed;
+    edges.update({ id: ctxEdgeId, label: trimmed, _data: edge._data });
+    markEdgeDirty(ctxEdgeId);
+  } else if (action === 'change-type') {
+    const types = ['depends_on', 'blocks', 'relates_to', 'feeds_into'];
+    const labels = {
+      depends_on: 'Depende de (→)',
+      blocks:     'Bloquea a (⊗)',
+      relates_to: 'Se relaciona con (--)',
+      feeds_into: 'Alimenta a (⇒)'
+    };
+    const current = (edge._data && edge._data.edgeType) || 'depends_on';
+    const choice = prompt(
+      'Cambiar tipo de conexión a uno de:\n' +
+      types.map(t => `  ${t === current ? '*' : ' '} ${t} — ${labels[t]}`).join('\n') +
+      '\n\n(Escribe exactamente: depends_on, blocks, relates_to o feeds_into)',
+      current
+    );
+    if (choice === null) { ctxEdgeId = null; return; }
+    const newType = choice.trim();
+    if (!types.includes(newType)) {
+      showToast('Tipo no válido', 'error');
+      ctxEdgeId = null;
+      return;
+    }
+    const style = EDGE_STYLE[newType];
+    edge._data = edge._data || {};
+    edge._data.edgeType = newType;
+    edges.update({
+      id: ctxEdgeId,
+      arrows: style.arrows,
+      dashes: style.dashes,
+      color: { color: style.color },
+      width: style.width || 1.5,
+      _data: edge._data
+    });
+    markEdgeDirty(ctxEdgeId);
+  }
+
+  ctxEdgeId = null;
+}
+
+/* =====================================================================
+   DIRTY TRACKING
+===================================================================== */
+function markNodeDirty(visId) {
+  dirtyNodes.add(visId);
+  updateSaveStatus();
+}
+function markEdgeDirty(visEdgeId) {
+  dirtyEdges.add(visEdgeId);
+  updateSaveStatus();
+}
+
+function isDirty() {
+  return dirtyNodes.size > 0
+      || dirtyEdges.size > 0
+      || deletedNodeAirtableIds.length > 0
+      || deletedEdgeAirtableIds.length > 0;
+}
+
+function updateSaveStatus() {
+  const btn = document.getElementById('save-btn');
+  const status = document.getElementById('saved-status');
+  if (isDirty()) {
+    btn.classList.add('dirty');
+    status.classList.add('dirty');
+    const count = dirtyNodes.size + dirtyEdges.size + deletedNodeAirtableIds.length + deletedEdgeAirtableIds.length;
+    status.textContent = `${count} cambio${count===1?'':'s'} sin guardar`;
+  } else {
+    btn.classList.remove('dirty');
+    status.classList.remove('dirty');
+    status.textContent = 'Sin cambios';
+  }
+}
+
+/* =====================================================================
+   SAVE
+===================================================================== */
+async function saveLayout() {
+  if (!isDirty()) {
+    showToast('No hay cambios para guardar');
+    return;
+  }
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+
+  try {
+    // 1. Delete edges first (FK-safe)
+    for (const id of deletedEdgeAirtableIds.slice()) {
+      await airtableDelete(TBL_EDGES, id);
+    }
+    deletedEdgeAirtableIds.length = 0;
+
+    // 2. Delete nodes
+    for (const id of deletedNodeAirtableIds.slice()) {
+      await airtableDelete(TBL_NODES, id);
+    }
+    deletedNodeAirtableIds.length = 0;
+
+    // 3. Create/update nodes — must do all nodes BEFORE edges that reference them
+    const dirtyNodeList = Array.from(dirtyNodes);
+    for (const visId of dirtyNodeList) {
+      const node = nodes.get(visId);
+      if (!node) continue;
+      const fields = {
+        nodeType:       node._data.nodeType,
+        sourceTable:    node._data.sourceTable || '',
+        sourceRecordId: node._data.sourceRecordId || '',
+        label:          node._data.label,
+        posX:           Math.round(node._data.posX * 100) / 100,
+        posY:           Math.round(node._data.posY * 100) / 100,
+        color:          node._data.color || '',
+        notes:          node._data.notes || ''
+      };
+      const existingAirId = nodeAirtableId.get(visId);
+      if (existingAirId) {
+        await airtableUpdate(TBL_NODES, existingAirId, fields);
+      } else {
+        const created = await airtableCreate(TBL_NODES, fields);
+        nodeAirtableId.set(visId, created.id);
+      }
+      dirtyNodes.delete(visId);
+    }
+
+    // 4. Create/update edges (now all referenced nodes have Airtable IDs)
+    const dirtyEdgeList = Array.from(dirtyEdges);
+    for (const visEdgeId of dirtyEdgeList) {
+      const edge = edges.get(visEdgeId);
+      if (!edge) continue;
+      const fromAirId = nodeAirtableId.get(edge.from);
+      const toAirId = nodeAirtableId.get(edge.to);
+      if (!fromAirId || !toAirId) {
+        console.warn('Skipping edge with unsaved nodes:', visEdgeId);
+        continue;
+      }
+      const fields = {
+        fromNode: [fromAirId],
+        toNode:   [toAirId],
+        edgeType: edge._data.edgeType || 'depends_on',
+        label:    edge._data.label || ''
+      };
+      const existingAirId = edgeAirtableId.get(visEdgeId);
+      if (existingAirId) {
+        await airtableUpdate(TBL_EDGES, existingAirId, fields);
+      } else {
+        const created = await airtableCreate(TBL_EDGES, fields);
+        edgeAirtableId.set(visEdgeId, created.id);
+      }
+      dirtyEdges.delete(visEdgeId);
+    }
+
+    showToast('✓ Guardado', 'success');
+    updateSaveStatus();
+  } catch (err) {
+    console.error(err);
+    showToast('Error al guardar: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 Guardar';
+  }
+}
+
+/* =====================================================================
+   REORGANIZE BY AREA
+   Sweeps every activity node on the canvas and lays them out in
+   horizontal swim lanes — one row per area in Project Areas `Order`,
+   columns by createdTime ascending within each lane.
+   Non-activity nodes are NOT moved (user-placed milestones, decisions,
+   areas-as-nodes, etc. keep their positions).
+===================================================================== */
+function reorganizeByArea() {
+  const activityNodes = [];
+  nodes.forEach(n => {
+    if (n._data && n._data.nodeType === 'actividad') activityNodes.push(n);
+  });
+
+  if (!activityNodes.length) {
+    showToast('No hay actividades en el grafo para reorganizar');
+    return;
+  }
+  if (!confirm(`Reorganizar ${activityNodes.length} actividad${activityNodes.length===1?'':'es'} en filas por área?\n(Otros nodos no se moverán)`)) return;
+
+  // Build {areaId: [actNode, ...]} buckets
+  const buckets = new Map();
+  for (const n of activityNodes) {
+    const sourceRec = allActividades.find(r => r.id === n._data.sourceRecordId);
+    const areaId = sourceRec ? (pAreaIds(sourceRec.fields.pArea)[0] || '__no_area__') : '__no_area__';
+    if (!buckets.has(areaId)) buckets.set(areaId, []);
+    buckets.get(areaId).push({ node: n, rec: sourceRec });
+  }
+
+  // Sort each bucket by source createdTime ascending
+  for (const arr of buckets.values()) {
+    arr.sort((a, b) => {
+      const ta = a.rec ? (a.rec.createdTime || '') : '';
+      const tb = b.rec ? (b.rec.createdTime || '') : '';
+      return ta.localeCompare(tb);
+    });
+  }
+
+  // Order the buckets themselves: by Project Areas Order, '__no_area__' last
+  const orderedBuckets = [...buckets.entries()]
+    .map(([areaId, arr]) => {
+      const order = areaId === '__no_area__' ? 99999 : areaOrder(areaId);
+      return { areaId, arr, order };
+    })
+    .sort((a, b) => a.order - b.order);
+
+  // Layout grid
+  const COL_W = 200;   // horizontal spacing between activity nodes in a lane
+  const ROW_H = 130;   // vertical spacing between area lanes
+  const X0 = 0;
+  const Y0 = 0;
+
+  let rowIndex = 0;
+  for (const { arr } of orderedBuckets) {
+    arr.forEach((entry, colIndex) => {
+      const newX = X0 + colIndex * COL_W;
+      const newY = Y0 + rowIndex * ROW_H;
+      const visId = entry.node.id;
+      // Update both vis-network position and our internal state
+      network.moveNode(visId, newX, newY);
+      const dataNode = nodes.get(visId);
+      if (dataNode) {
+        dataNode._data.posX = newX;
+        dataNode._data.posY = newY;
+        markNodeDirty(visId);
+      }
+    });
+    rowIndex++;
+  }
+
+  // Center the view on the new layout
+  setTimeout(() => network.fit({ animation: { duration: 600, easingFunction: 'easeInOutQuad' } }), 50);
+  showToast(`Reorganizadas ${activityNodes.length} actividades en ${orderedBuckets.length} áreas`, 'success');
+}
+
+/* =====================================================================
+   RELOAD
+===================================================================== */
+async function reloadGraph() {
+  if (isDirty() && !confirm('Tienes cambios sin guardar. ¿Recargar de todas formas?')) return;
+  // Reset state
+  if (network) network.destroy();
+  nodeAirtableId.clear();
+  edgeAirtableId.clear();
+  dirtyNodes.clear();
+  dirtyEdges.clear();
+  deletedNodeAirtableIds.length = 0;
+  deletedEdgeAirtableIds.length = 0;
+  await init();
+  // Re-apply current filter — the chip selection persists across reloads
+  applyTypeFilter();
+}
+
+/* =====================================================================
+   UI HELPERS
+===================================================================== */
+/* =====================================================================
+   SHIFT+DRAG LASSO SELECTION
+   Custom rubber-band: hold Shift, drag a rectangle, all nodes inside get
+   selected. Skipped when edge-creation mode is active so the two flows
+   don't conflict. Existing pan-on-drag (without Shift) is unaffected.
+===================================================================== */
+function setupLassoSelection() {
+  const container = document.getElementById('network');
+  if (!container) return;
+
+  let lassoActive = false;
+  let startScreen = null;        // { x, y } in container-relative pixels
+  let lassoEl = null;            // the visible rectangle div
+
+  container.addEventListener('mousedown', (e) => {
+    // Ignore right-clicks (those are for context menu)
+    if (e.button !== 0) return;
+    // Only activate on Shift+drag, and never while creating an edge
+    if (!e.shiftKey || edgeMode) return;
+
+    const rect = container.getBoundingClientRect();
+    const localX = e.clientX - rect.left;
+    const localY = e.clientY - rect.top;
+
+    // If a node is at this position, let vis-network handle it (drag the node)
+    const nodeAtCursor = network.getNodeAt({ x: localX, y: localY });
+    if (nodeAtCursor) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    lassoActive = true;
+    startScreen = { x: localX, y: localY };
+
+    lassoEl = document.createElement('div');
+    lassoEl.className = 'lasso-rect';
+    lassoEl.style.left = localX + 'px';
+    lassoEl.style.top = localY + 'px';
+    lassoEl.style.width = '0px';
+    lassoEl.style.height = '0px';
+    container.appendChild(lassoEl);
+  });
+
+  container.addEventListener('mousemove', (e) => {
+    if (!lassoActive || !lassoEl) return;
+    const rect = container.getBoundingClientRect();
+    const localX = e.clientX - rect.left;
+    const localY = e.clientY - rect.top;
+    const x = Math.min(startScreen.x, localX);
+    const y = Math.min(startScreen.y, localY);
+    const w = Math.abs(localX - startScreen.x);
+    const h = Math.abs(localY - startScreen.y);
+    lassoEl.style.left = x + 'px';
+    lassoEl.style.top = y + 'px';
+    lassoEl.style.width = w + 'px';
+    lassoEl.style.height = h + 'px';
+  });
+
+  // mouseup is on window so we still catch a release outside the container
+  window.addEventListener('mouseup', (e) => {
+    if (!lassoActive) return;
+    lassoActive = false;
+    if (!lassoEl) return;
+
+    const rect = container.getBoundingClientRect();
+    const localX = e.clientX - rect.left;
+    const localY = e.clientY - rect.top;
+    const x1 = Math.min(startScreen.x, localX);
+    const y1 = Math.min(startScreen.y, localY);
+    const x2 = Math.max(startScreen.x, localX);
+    const y2 = Math.max(startScreen.y, localY);
+
+    // Convert the screen-space rect corners into graph (canvas) coordinates.
+    // Position comparisons must happen in graph space because that's what
+    // network.getPositions() returns and it accounts for pan/zoom.
+    const tl = network.DOMtoCanvas({ x: x1, y: y1 });
+    const br = network.DOMtoCanvas({ x: x2, y: y2 });
+    const minX = Math.min(tl.x, br.x);
+    const maxX = Math.max(tl.x, br.x);
+    const minY = Math.min(tl.y, br.y);
+    const maxY = Math.max(tl.y, br.y);
+
+    // If the rectangle is essentially a click (zero size), don't change selection
+    const dragDistance = Math.hypot(x2 - x1, y2 - y1);
+    if (dragDistance > 4) {
+      const positions = network.getPositions();
+      const selected = [];
+      nodes.forEach(node => {
+        if (node.hidden === true) return;
+        const p = positions[node.id];
+        if (!p) return;
+        if (p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY) {
+          selected.push(node.id);
+        }
+      });
+      // If user held additional modifier (Ctrl/Cmd), append to existing
+      // selection; otherwise replace it. Keeps muscle memory consistent
+      // with the click-to-multi-select model.
+      const additive = e.ctrlKey || e.metaKey;
+      if (additive) {
+        const current = network.getSelectedNodes();
+        const combined = Array.from(new Set([...current, ...selected]));
+        network.setSelection({ nodes: combined });
+      } else {
+        network.setSelection({ nodes: selected });
+      }
+    }
+
+    lassoEl.remove();
+    lassoEl = null;
+    startScreen = null;
+  });
+
+  // If user lets go of Shift mid-drag, cancel the lasso cleanly
+  window.addEventListener('keyup', (e) => {
+    if (e.key === 'Shift' && lassoActive && lassoEl) {
+      lassoEl.remove();
+      lassoEl = null;
+      lassoActive = false;
+      startScreen = null;
+    }
+  });
+}
+
+function showLoading(on) {
+  document.getElementById('loading-overlay').style.display = on ? 'flex' : 'none';
+}
+function updateEmptyState() {
+  const empty = document.getElementById('empty-state');
+  empty.style.display = (nodes && nodes.length === 0) ? 'block' : 'none';
+}
+function updateWeekPill() {
+  const pill = document.getElementById('week-pill');
+  if (!pill) return;
+  if (CURRENT_WEEK == null) {
+    pill.textContent = '';   // before WEEK_1_START — pill hides via :empty
+    return;
+  }
+  pill.textContent = `Semana ${CURRENT_WEEK}`;
+}
+
+/* =====================================================================
+   FILTER CHIPS (TYPE + AREA)
+   Two axes that AND together: a node is visible if its type is enabled AND
+   (per area-filter rules: if it's an activity, its area must be enabled,
+   otherwise area filter doesn't apply).
+   Cortes/Cotizaciones/Hitos/etc. are NOT subject to the area filter — only
+   activities are.
+===================================================================== */
+function onFilterChipClick(filter) {
+  if (filter === '__all__') {
+    visibleTypes = new Set(ALL_NODE_TYPES);
+  } else {
+    if (visibleTypes.has(filter)) {
+      visibleTypes.delete(filter);
+    } else {
+      visibleTypes.add(filter);
+    }
+  }
+  applyFilters();
+  updateChipStyles();
+}
+
+function onAreaChipClick(areaKey) {
+  if (!visibleAreas) initAreaFilter();
+  if (areaKey === '__all__') {
+    // Reset: show all areas + no-area
+    visibleAreas = new Set([...allAreas.map(a => a.id), NO_AREA_KEY]);
+  } else {
+    if (visibleAreas.has(areaKey)) {
+      visibleAreas.delete(areaKey);
+    } else {
+      visibleAreas.add(areaKey);
+    }
+  }
+  applyFilters();
+  updateAreaChipStyles();
+}
+
+// Initialize visibleAreas to "everything on" once areas are loaded.
+function initAreaFilter() {
+  visibleAreas = new Set([...allAreas.map(a => a.id), NO_AREA_KEY]);
+}
+
+// Build the area chip row dynamically. Called after Project Areas load.
+function buildAreaChips() {
+  const container = document.getElementById('area-legend');
+  const section = document.getElementById('fd-area-section');
+  if (!container) return;
+  if (!allAreas.length) {
+    if (section) section.style.display = 'none';
+    return;
+  }
+  if (section) section.style.display = '';
+
+  // Sort areas by Project Areas Order, fall back to Name
+  const sorted = [...allAreas].sort((a, b) => {
+    const oa = (a.fields.Order ?? a.fields.order ?? 9999);
+    const ob = (b.fields.Order ?? b.fields.order ?? 9999);
+    return oa - ob || (a.fields.Name || '').localeCompare(b.fields.Name || '');
+  });
+
+  // Initialize state if not yet set
+  if (!visibleAreas) initAreaFilter();
+
+  let html = `<button class="area-chip all" data-area="__all__" onclick="onAreaChipClick('__all__')">Todo</button>`;
+  for (const a of sorted) {
+    const name = a.fields.Name || '(sin nombre)';
+    html += `<button class="area-chip" data-area="${escapeHtml(a.id)}" onclick="onAreaChipClick('${a.id}')">${escapeHtml(name)}</button>`;
+  }
+  // "Sin área" chip at the end
+  html += `<button class="area-chip no-area" data-area="${NO_AREA_KEY}" onclick="onAreaChipClick('${NO_AREA_KEY}')">Sin área</button>`;
+
+  container.innerHTML = html;
+  updateAreaChipStyles();
+}
+
+function applyFilters() {
+  if (!nodes) return;
+  const updates = [];
+  nodes.forEach(node => {
+    if (!node._data) return;
+
+    // Type filter — applies to all nodes
+    const typeOk = visibleTypes.has(node._data.nodeType);
+
+    // Area filter — applies ONLY to activities. Other types pass through.
+    let areaOk = true;
+    if (node._data.nodeType === 'actividad' && visibleAreas) {
+      const key = node._data.areaId || NO_AREA_KEY;
+      areaOk = visibleAreas.has(key);
+    }
+
+    // Status filter — applies ONLY to activities (per design choice).
+    // Activities without a status default to '〇' so they're always
+    // governed by the matching chip.
+    let statusOk = true;
+    if (node._data.nodeType === 'actividad') {
+      const s = node._data.statusForDisplay || '〇';
+      statusOk = visibleStatuses.has(s);
+    }
+
+    // Cotization status filter — applies ONLY to cotization nodes.
+    // We read the live status from the cache (since edits may have updated it)
+    // and compare its emoji prefix against the visible set.
+    let cotizStatusOk = true;
+    if (node._data.nodeType === 'cotizacion' && node._data.sourceRecordId) {
+      const rec = allCotizaciones.find(c => c.id === node._data.sourceRecordId);
+      const emoji = rec ? extractEmojiPrefix(rec.fields.Status) : '';
+      // If no emoji status set on the record, leave the node visible
+      if (emoji) cotizStatusOk = visibleCotizStatuses.has(emoji);
+    }
+
+    const shouldShow = typeOk && areaOk && statusOk && cotizStatusOk;
+    const isHiddenNow = node.hidden === true;
+    const willBeHidden = !shouldShow;
+    if (isHiddenNow !== willBeHidden) {
+      updates.push({ id: node.id, hidden: willBeHidden });
+    }
+  });
+  if (updates.length) nodes.update(updates);
+}
+
+// Backwards-compat alias — older code paths still call applyTypeFilter().
+function applyTypeFilter() { applyFilters(); }
+
+function updateChipStyles() {
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    const f = chip.dataset.filter;
+    if (f === '__all__') {
+      const allOn = ALL_NODE_TYPES.every(t => visibleTypes.has(t));
+      chip.classList.toggle('active', allOn);
+    } else {
+      chip.classList.toggle('active', visibleTypes.has(f));
+    }
+  });
+  updateFilterBadge();
+}
+
+function updateAreaChipStyles() {
+  if (!visibleAreas) return;
+  const totalKeys = allAreas.length + 1;   // +1 for __no_area__
+  const activeCount = visibleAreas.size;
+  document.querySelectorAll('.area-chip').forEach(chip => {
+    const key = chip.dataset.area;
+    if (key === '__all__') {
+      chip.classList.toggle('active', activeCount === totalKeys);
+    } else {
+      chip.classList.toggle('active', visibleAreas.has(key));
+    }
+  });
+  updateFilterBadge();
+}
+
+function onStatusChipClick(status) {
+  if (status === '__all__') {
+    visibleStatuses = new Set(ALL_STATUSES);
+  } else {
+    if (visibleStatuses.has(status)) {
+      visibleStatuses.delete(status);
+    } else {
+      visibleStatuses.add(status);
+    }
+  }
+  applyFilters();
+  updateStatusChipStyles();
+}
+
+function updateStatusChipStyles() {
+  document.querySelectorAll('.status-chip').forEach(chip => {
+    const s = chip.dataset.status;
+    if (s === '__all__') {
+      chip.classList.toggle('active', ALL_STATUSES.every(st => visibleStatuses.has(st)));
+    } else {
+      chip.classList.toggle('active', visibleStatuses.has(s));
+    }
+  });
+  updateFilterBadge();
+}
+
+function onCotizStatusChipClick(status) {
+  if (status === '__all__') {
+    visibleCotizStatuses = new Set(ALL_COTIZ_STATUSES);
+  } else {
+    if (visibleCotizStatuses.has(status)) {
+      visibleCotizStatuses.delete(status);
+    } else {
+      visibleCotizStatuses.add(status);
+    }
+  }
+  applyFilters();
+  updateCotizStatusChipStyles();
+}
+
+function updateCotizStatusChipStyles() {
+  document.querySelectorAll('.cotiz-status-chip').forEach(chip => {
+    const s = chip.dataset.cstatus;
+    if (s === '__all__') {
+      chip.classList.toggle('active', ALL_COTIZ_STATUSES.every(st => visibleCotizStatuses.has(st)));
+    } else {
+      chip.classList.toggle('active', visibleCotizStatuses.has(s));
+    }
+  });
+  updateFilterBadge();
+}
+
+/* =====================================================================
+   FILTER DRAWER — open/close, badge update, reset-all
+===================================================================== */
+function openFilterDrawer() {
+  document.getElementById('filter-drawer').classList.add('show');
+  document.getElementById('filter-drawer-scrim').classList.add('show');
+}
+
+function closeFilterDrawer() {
+  document.getElementById('filter-drawer').classList.remove('show');
+  document.getElementById('filter-drawer-scrim').classList.remove('show');
+}
+
+// Returns the count of currently-active filter constraints across all 3 axes.
+// "Active" means: at least one option is unchecked in that axis.
+// 0 = all filters fully open (full graph visible). >0 = partial filtering.
+function activeFilterCount() {
+  let count = 0;
+  if (visibleTypes && !ALL_NODE_TYPES.every(t => visibleTypes.has(t))) count++;
+  if (visibleAreas) {
+    const totalKeys = allAreas.length + 1;   // +1 for __no_area__
+    if (visibleAreas.size !== totalKeys) count++;
+  }
+  if (visibleStatuses && !ALL_STATUSES.every(s => visibleStatuses.has(s))) count++;
+  if (visibleCotizStatuses && !ALL_COTIZ_STATUSES.every(s => visibleCotizStatuses.has(s))) count++;
+  return count;
+}
+
+function updateFilterBadge() {
+  const btn = document.getElementById('filter-trigger-btn');
+  const badge = document.getElementById('filter-count-badge');
+  if (!btn || !badge) return;
+  const count = activeFilterCount();
+  if (count > 0) {
+    btn.classList.add('has-active');
+    badge.textContent = count;
+  } else {
+    btn.classList.remove('has-active');
+    badge.textContent = '';
+  }
+}
+
+function resetAllFilters() {
+  visibleTypes = new Set(ALL_NODE_TYPES);
+  if (visibleAreas) initAreaFilter();   // re-fill with all area ids
+  visibleStatuses = new Set(ALL_STATUSES);
+  visibleCotizStatuses = new Set(ALL_COTIZ_STATUSES);
+  applyFilters();
+  updateChipStyles();
+  updateAreaChipStyles();
+  updateStatusChipStyles();
+  updateCotizStatusChipStyles();
+}
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* =====================================================================
+   DETAIL PANEL — opens on double-click of a node
+   Pulls live data from the source caches (allActividades, allCotizaciones,
+   allCortes, allAreas) so even if the node label was customized on the
+   canvas, the panel shows fresh source-of-truth values.
+===================================================================== */
+// Tracks which visId is currently open in the panel — so async refreshes
+// (e.g. Actions arriving after panel opens) only happen if the user is
+// still looking at the same node.
+let currentPanelVisId = null;
+
+// Status editor state for the currently-open activity panel.
+// Holds the user's pending status pick before they hit "Actualizar".
+// `null` means no pending change (idle state).
+let stagedStatus = null;
+
+function openDetailPanel(visId) {
+  const node = nodes.get(visId);
+  if (!node || !node._data) return;
+
+  currentPanelVisId = visId;
+  stagedStatus = null;   // fresh panel, no staged changes
+  document.getElementById('detail-panel-body').innerHTML = renderDetailPanel(node);
+
+  const typeLabels = {
+    actividad:  'Actividad',
+    cotizacion: 'Cotización',
+    partida:    'Corte',
+    area:       'Área de Proyecto',
+    milestone:  'Hito',
+    decision:   'Decisión',
+    custom:     'Personalizado'
+  };
+  document.getElementById('detail-panel-type').textContent =
+    typeLabels[node._data.nodeType] || 'Nodo';
+
+  document.getElementById('detail-panel').classList.add('show');
+  document.getElementById('detail-panel-scrim').classList.add('show');
+
+  // Lazy-load Actions for activity panels. If they aren't loaded yet, the
+  // panel renders with a "Cargando..." placeholder; once the fetch resolves,
+  // we re-render the panel (only if the same node is still open).
+  if (node._data.nodeType === 'actividad' && allActions === null) {
+    ensureActionsLoaded().then(() => {
+      if (currentPanelVisId === visId) {
+        const stillNode = nodes.get(visId);
+        if (stillNode && stillNode._data) {
+          document.getElementById('detail-panel-body').innerHTML = renderDetailPanel(stillNode);
+        }
+      }
+    });
+  }
+}
+
+function closeDetailPanel() {
+  currentPanelVisId = null;
+  stagedStatus = null;
+  // Stop any in-flight iframe loads — clear src so the iframe disconnects
+  // from its source. Browsers continue loading hidden iframes otherwise,
+  // which wastes bandwidth and keeps Drive sessions alive unnecessarily.
+  document.querySelectorAll('.dp-doc-frame').forEach(f => {
+    try { f.src = 'about:blank'; } catch (e) { /* swallow */ }
+  });
+  document.getElementById('detail-panel').classList.remove('show');
+  document.getElementById('detail-panel-scrim').classList.remove('show');
+}
+
+// Close on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeDetailPanel();
+    closeFilterDrawer();
+  }
+});
+
+/* ---------- Type dispatcher ---------- */
+function renderDetailPanel(node) {
+  switch (node._data.nodeType) {
+    case 'actividad':  return renderActividadPanel(node);
+    case 'cotizacion': return renderCotizacionPanel(node);
+    case 'partida':    return renderCortePanel(node);
+    case 'area':       return renderAreaPanel(node);
+    case 'milestone':  return renderHitoPanel(node);
+    default:           return renderFreeformPanel(node);
+  }
+}
+
+/* ---------- Reusable field markup helpers ---------- */
+function dpField(label, value, opts = {}) {
+  const cls = opts.full ? 'dp-field dp-field-full' : 'dp-field';
+  const valCls = ['dp-field-value', opts.amount ? 'amount' : '', !value && value !== 0 ? 'empty' : ''].filter(Boolean).join(' ');
+  const display = (value === '' || value == null) ? '—' : (opts.raw ? value : escapeHtml(String(value)));
+  return `<div class="${cls}">
+    <div class="dp-field-label">${escapeHtml(label)}</div>
+    <div class="${valCls}">${display}</div>
+  </div>`;
+}
+
+function dpSection(title, body) {
+  return `<div class="dp-section">
+    <div class="dp-section-title">${escapeHtml(title)}</div>
+    ${body}
+  </div>`;
+}
+
+function fmtCOP(n) {
+  if (n === null || n === undefined || n === '') return '—';
+  const num = Number(n);
+  if (isNaN(num)) return '—';
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency', currency: 'COP', maximumFractionDigits: 0
+  }).format(num);
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  // Airtable date fields come as 'YYYY-MM-DD'
+  const parts = String(d).split('T')[0].split('-');
+  if (parts.length !== 3) return d;
+  const dt = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  return dt.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/* ---------- DRIVE LINKS — defensive parser + renderer ----------
+   The `Drive Links` field on Cotizaciones and Cortes started out as JSON
+   like '[{"name":"factura.pdf","url":"https://drive.google.com/...","id":"..."}]'
+   but legacy records may contain a plain URL or even an empty/malformed
+   string. We parse defensively and render whatever we can show safely.
+   Returns an HTML section, or empty string if there's nothing to show.
+*/
+function renderDriveLinks(rawValue, fallbackLegacyUrl) {
+  const items = parseDriveLinks(rawValue);
+  // Add a legacy plain `URL` link if it isn't already in the parsed list
+  if (fallbackLegacyUrl && fallbackLegacyUrl.trim()) {
+    const legacyUrl = fallbackLegacyUrl.trim();
+    const already = items.some(it => it.url === legacyUrl);
+    if (!already) {
+      items.push({ name: 'Enlace legacy', url: legacyUrl });
+    }
+  }
+  if (!items.length) return '';
+
+  const cards = items.map(it => {
+    const safeUrl = escapeHtml(it.url);
+    const safeName = escapeHtml(it.name || it.url);
+    const embedUrl = toDriveEmbedUrl(it.url);
+    const canEmbed = !!embedUrl;
+
+    return `<div class="dp-doc-card">
+      <div class="dp-doc-header">
+        <span class="dp-doc-icon">📎</span>
+        <span class="dp-doc-name" title="${safeUrl}">${safeName}</span>
+        <a class="dp-doc-open" href="${safeUrl}" target="_blank" rel="noopener" title="Abrir en ventana nueva">
+          ↗ <span class="dp-doc-open-label">Nueva ventana</span>
+        </a>
+      </div>
+      <div class="dp-doc-frame-wrap">
+        ${canEmbed
+          ? `<iframe class="dp-doc-frame" src="${escapeHtml(embedUrl)}" loading="lazy"
+                     allow="autoplay" referrerpolicy="no-referrer"
+                     sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>`
+          : `<div class="dp-doc-noembed">
+               <div class="dp-doc-noembed-icon">🔒</div>
+               <div>Vista previa no disponible para este enlace.</div>
+               <div class="dp-doc-noembed-sub">Usa "Nueva ventana" para abrirlo.</div>
+             </div>`}
+      </div>
+    </div>`;
+  }).join('');
+
+  return dpSection('Documentos', `<div class="dp-doc-list">${cards}</div>`);
+}
+
+// Convert a user-visible Drive URL into the iframe-embeddable /preview variant.
+// Returns null when the URL isn't recognizably a Drive file we can embed.
+//   https://drive.google.com/file/d/FILE_ID/view?usp=sharing -> /preview
+//   https://drive.google.com/open?id=FILE_ID                 -> /preview
+//   anything else                                            -> null (no embed)
+function toDriveEmbedUrl(url) {
+  if (!url) return null;
+  const s = String(url);
+  // /file/d/{id}/...
+  let m = s.match(/drive\.google\.com\/file\/d\/([^/]+)/i);
+  if (m) return `https://drive.google.com/file/d/${m[1]}/preview`;
+  // open?id={id}
+  m = s.match(/drive\.google\.com\/open\?id=([^&]+)/i);
+  if (m) return `https://drive.google.com/file/d/${m[1]}/preview`;
+  // docs.google.com/document/d/{id}/edit -> /preview (docs, sheets, slides)
+  m = s.match(/docs\.google\.com\/(document|spreadsheets|presentation)\/d\/([^/]+)/i);
+  if (m) return `https://docs.google.com/${m[1]}/d/${m[2]}/preview`;
+  return null;
+}
+
+function parseDriveLinks(rawValue) {
+  if (!rawValue) return [];
+  const value = String(rawValue).trim();
+  if (!value) return [];
+
+  // Try JSON array first
+  if (value.startsWith('[') || value.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(value);
+      const arr = Array.isArray(parsed) ? parsed : [parsed];
+      return arr
+        .filter(o => o && typeof o === 'object' && (o.url || o.link))
+        .map(o => ({
+          name: o.name || o.filename || o.title || o.url || o.link,
+          url:  o.url  || o.link,
+          id:   o.id   || ''
+        }));
+    } catch (e) {
+      // Malformed JSON — fall through to other heuristics
+    }
+  }
+
+  // Plain URL?
+  if (/^https?:\/\//i.test(value)) {
+    return [{ name: value, url: value }];
+  }
+
+  // Newline-separated list of URLs (a common manual-entry format)
+  const lines = value.split(/\n+/).map(s => s.trim()).filter(Boolean);
+  const urls = lines.filter(l => /^https?:\/\//i.test(l));
+  if (urls.length) {
+    return urls.map(u => ({ name: u, url: u }));
+  }
+
+  // Nothing recognizable — render nothing rather than display garbage
+  return [];
+}
+
+/* ---------- ACTIVIDAD ---------- */
+function renderActividadPanel(node) {
+  const recId = node._data.sourceRecordId;
+  const rec = allActividades.find(a => a.id === recId);
+  if (!rec) {
+    return renderMissingSource(node, 'Actividades');
+  }
+  const f = rec.fields;
+  const task = f.Task || f.Name || node._data.label;
+  const status = f.Status || '〇';
+  const progress = (f.Progress != null) ? `${Math.round(Number(f.Progress) * (Number(f.Progress) <= 1 ? 100 : 1))}%` : '';
+  const project = f.Project || '';
+  const areaName = pAreaPrimaryName(f.pArea) || '';
+  const responsible = Array.isArray(f.Responsible) ? f.Responsible.join(', ') : (f.Responsible || '');
+  const lineId = f.ID || '';
+  const alert = (f.Alert || '').trim();
+  const gantt = f.Gantt;
+
+  let html = `<div class="dp-title">${escapeHtml(task)}</div>`;
+  html += renderStatusEditor(status, 'actividad');
+  html += `<div class="dp-status-row">
+    ${progress ? `<span class="dp-status-pill">📊 ${escapeHtml(progress)}</span>` : ''}
+  </div>`;
+
+  html += `<div class="dp-fields">
+    ${dpField('Línea #', lineId)}
+    ${dpField('Progreso', progress)}
+    ${dpField('Proyecto', project)}
+    ${dpField('Área', areaName)}
+    ${gantt ? dpField('Gantt', fmtDate(gantt)) : ''}
+    ${dpField('Responsable', responsible, { full: true })}
+  </div>`;
+
+  if (alert) {
+    html += dpSection('Alerta', `<div class="dp-alert-box">${escapeHtml(alert)}</div>`);
+  }
+
+  // Drive Links if the activity record has any (defensive against missing field)
+  html += renderDriveLinks(f['Drive Links']);
+
+  html += renderActionsSection(rec.id);
+
+  return html;
+}
+
+/* ---------- STATUS EDITOR (within activity panel) ---------- */
+// Renders three states:
+// (1) Idle: a clickable pill showing current status — clicking expands to picker
+// (2) Picker open: a row of all 5 emoji options to select from
+// (3) Pending: same as picker but with "Actualizar" button visible
+//     (only when stagedStatus differs from the saved status)
+/* =====================================================================
+   STATUS EDITOR — reusable across node types
+   Each node type that supports editing declares its config:
+     - options: array of allowed status values to pick from
+     - getSaved(rec): how to read current status from the source record
+     - format(emoji): the string to write back to Airtable when picking emoji
+     - label(value): human-readable name for tooltip/pill
+     - tableName: which Airtable table to PATCH
+     - cache: which in-memory cache to update after a successful PATCH
+   For cotizaciones the stored format is "🟡 Pendiente" (emoji + word), so
+   we work in emoji-only space inside the picker UI but write the full
+   string when committing.
+===================================================================== */
+const STATUS_EDITOR_CONFIGS = {
+  actividad: {
+    options: ['🔴', '🟡', '🟢', '🔵', '〇'],
+    tableName: () => TBL_ACTIVIDADES,
+    cache: () => allActividades,
+    getSaved: rec => rec.fields.Status || '〇',
+    extractEmoji: value => value || '〇',
+    formatForWrite: emoji => emoji,                  // activities store just the emoji
+    label: emoji => statusLabel(emoji)
+  },
+  cotizacion: {
+    options: ['🔴', '🟡', '🟢', '🔵'],               // no deprecated state
+    tableName: () => TBL_COTIZACIONES,
+    cache: () => allCotizaciones,
+    getSaved: rec => rec.fields.Status || '',
+    extractEmoji: value => extractEmojiPrefix(value),
+    formatForWrite: emoji => emoji,                  // cotizaciones also store just the emoji
+    label: emoji => cotizStatusLabel(emoji)
+  }
+};
+
+// Cotizaciones store the emoji directly (e.g. "🟡"). This helper is defensive:
+// it returns just the leading emoji so any legacy records with appended words
+// (e.g. "🟡 Pendiente") still work without crashing.
+function extractEmojiPrefix(value) {
+  if (!value) return '';
+  const known = ['🔴', '🟡', '🟢', '🔵'];
+  for (const e of known) if (String(value).startsWith(e)) return e;
+  return '';
+}
+
+function cotizStatusLabel(emoji) {
+  return ({ '🔴': 'Rechazada', '🟡': 'Pendiente', '🟢': 'Aprobada', '🔵': 'Pagada' })[emoji] || '';
+}
+
+// Returns the editor config for a given node, or null if no editor applies.
+function getStatusEditorConfig(node) {
+  if (!node || !node._data) return null;
+  return STATUS_EDITOR_CONFIGS[node._data.nodeType] || null;
+}
+
+function renderStatusEditor(savedEmoji, configKey) {
+  const cfg = STATUS_EDITOR_CONFIGS[configKey];
+  if (!cfg) return '';
+  const displayed = stagedStatus || savedEmoji;
+  const dirty = stagedStatus !== null && stagedStatus !== savedEmoji;
+
+  // Idle state — just a clickable pill
+  if (stagedStatus === null) {
+    return `<div class="dp-status-row">
+      <button class="dp-status-pill dp-status-editable" onclick="openStatusPicker(event)" title="Cambiar estado">
+        ${displayed} ${escapeHtml(cfg.label(displayed))}
+        <span class="dp-status-pill-edit-hint">✎</span>
+      </button>
+    </div>`;
+  }
+
+  // Picker open — N options + (conditionally) Actualizar button
+  const optionsHtml = cfg.options.map(s => {
+    const isSelected = s === displayed;
+    return `<button class="dp-status-option ${isSelected ? 'selected' : ''}"
+              onclick="selectStagedStatus('${s}')" title="${escapeHtml(cfg.label(s))}">
+      ${s}
+    </button>`;
+  }).join('');
+
+  return `<div class="dp-status-row">
+    <div class="dp-status-picker">
+      ${optionsHtml}
+      <button class="dp-status-cancel" onclick="cancelStatusEdit()" title="Cancelar">×</button>
+    </div>
+    ${dirty ? `<button class="dp-status-commit" onclick="commitStatusChange()">Actualizar</button>` : ''}
+  </div>`;
+}
+
+function openStatusPicker(e) {
+  e.stopPropagation();
+  if (!currentPanelVisId) return;
+  const node = nodes.get(currentPanelVisId);
+  if (!node) return;
+  const cfg = getStatusEditorConfig(node);
+  if (!cfg) return;
+  const rec = cfg.cache().find(r => r.id === node._data.sourceRecordId);
+  // Seed with current saved status so picker opens with the right thing selected
+  const savedRaw = rec ? cfg.getSaved(rec) : '';
+  stagedStatus = cfg.extractEmoji(savedRaw) || cfg.options[0];
+  document.getElementById('detail-panel-body').innerHTML = renderDetailPanel(node);
+}
+
+function selectStagedStatus(emoji) {
+  stagedStatus = emoji;
+  if (!currentPanelVisId) return;
+  const node = nodes.get(currentPanelVisId);
+  if (!node) return;
+  document.getElementById('detail-panel-body').innerHTML = renderDetailPanel(node);
+}
+
+function cancelStatusEdit() {
+  stagedStatus = null;
+  if (!currentPanelVisId) return;
+  const node = nodes.get(currentPanelVisId);
+  if (!node) return;
+  document.getElementById('detail-panel-body').innerHTML = renderDetailPanel(node);
+}
+
+async function commitStatusChange() {
+  if (!currentPanelVisId || !stagedStatus) return;
+  const node = nodes.get(currentPanelVisId);
+  if (!node) return;
+  const cfg = getStatusEditorConfig(node);
+  if (!cfg) return;
+
+  const recId = node._data.sourceRecordId;
+  const newEmoji = stagedStatus;
+  const writeValue = cfg.formatForWrite(newEmoji);
+  const commitBtn = document.querySelector('.dp-status-commit');
+  if (commitBtn) {
+    commitBtn.disabled = true;
+    commitBtn.textContent = 'Actualizando…';
+  }
+
+  try {
+    await airtableUpdate(cfg.tableName(), recId, { Status: writeValue });
+
+    // Update the cached source record
+    const cached = cfg.cache().find(r => r.id === recId);
+    if (cached) cached.fields.Status = writeValue;
+
+    // Update node visuals — preserve position, refresh the rest
+    const positions = network.getPositions([currentPanelVisId]);
+    if (positions[currentPanelVisId]) {
+      node._data.posX = positions[currentPanelVisId].x;
+      node._data.posY = positions[currentPanelVisId].y;
+    }
+    // Update statusForDisplay so the node re-colors itself on rebuild.
+    // Activities store just the emoji ('🟢'), cotizaciones store the full
+    // Airtable string ('🟢 Aprobada'). visNodeFor handles both formats.
+    if (node._data.nodeType === 'actividad') {
+      node._data.statusForDisplay = newEmoji;
+    } else if (node._data.nodeType === 'cotizacion') {
+      node._data.statusForDisplay = writeValue;
+    }
+    const rebuilt = visNodeFor(node._data, currentPanelVisId);
+    nodes.update(rebuilt);
+
+    // Re-apply filters in case the new status crosses a filter boundary
+    applyFilters();
+
+    stagedStatus = null;
+    const stillNode = nodes.get(currentPanelVisId);
+    if (stillNode) {
+      document.getElementById('detail-panel-body').innerHTML = renderDetailPanel(stillNode);
+    }
+    showToast('✓ Estado actualizado', 'success');
+  } catch (err) {
+    console.error(err);
+    showToast('Error al actualizar: ' + err.message, 'error');
+    if (commitBtn) {
+      commitBtn.disabled = false;
+      commitBtn.textContent = 'Actualizar';
+    }
+  }
+}
+
+/* ---------- ACCIONES (sub-section of activity panel) ---------- */
+function renderActionsSection(taskRecordId) {
+  // Three states:
+  // 1. Not yet fetched -> loading placeholder
+  // 2. Fetched, has actions -> summary + list
+  // 3. Fetched, empty for this task -> "Sin acciones registradas"
+  if (allActions === null) {
+    return `<div class="dp-section">
+      <div class="dp-section-title">Acciones</div>
+      <div class="dp-loading">Cargando acciones…</div>
+    </div>`;
+  }
+
+  const list = actionsForTask(taskRecordId);
+  if (!list.length) {
+    return `<div class="dp-section">
+      <div class="dp-section-title">Acciones</div>
+      <div class="dp-field-value empty">Sin acciones registradas.</div>
+    </div>`;
+  }
+
+  // Status counts for the summary pill row
+  const counts = { '🔴': 0, '🟡': 0, '🟢': 0, '🔵': 0, '〇': 0 };
+  for (const a of list) {
+    const s = a.fields.Status || '〇';
+    counts[s] = (counts[s] || 0) + 1;
+  }
+  const summaryPills = ['🔴','🟡','🟢','🔵','〇']
+    .filter(s => counts[s])
+    .map(s => `<span class="dp-status-pill">${s} ${counts[s]}</span>`)
+    .join('');
+
+  // Sort: red > yellow > green > blue > deprecated, then by createdTime asc
+  const order = { '🔴': 0, '🟡': 1, '🟢': 2, '🔵': 3, '〇': 4 };
+  const sorted = list.slice().sort((a, b) => {
+    const oa = order[a.fields.Status || '〇'] ?? 5;
+    const ob = order[b.fields.Status || '〇'] ?? 5;
+    if (oa !== ob) return oa - ob;
+    return (a.createdTime || '').localeCompare(b.createdTime || '');
+  });
+
+  const rows = sorted.map(a => {
+    const status = a.fields.Status || '〇';
+    const name = a.fields.Name || '(sin nombre)';
+    const desc = (a.fields.Description || '').trim();
+    return `<div class="dp-action-row">
+      <span class="dp-action-status">${status}</span>
+      <div class="dp-action-text">
+        <div class="dp-action-name">${escapeHtml(name)}</div>
+        ${desc ? `<div class="dp-action-desc">${escapeHtml(desc.length > 120 ? desc.slice(0, 117) + '…' : desc)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="dp-section">
+    <div class="dp-section-row">
+      <div class="dp-section-title">Acciones · ${list.length}</div>
+      <div class="dp-action-summary">${summaryPills}</div>
+    </div>
+    <div class="dp-action-list">${rows}</div>
+  </div>`;
+}
+
+function statusLabel(emoji) {
+  return ({
+    '🔴': 'Detenida',
+    '🟡': 'En pausa',
+    '🟢': 'En progreso',
+    '🔵': 'Completada',
+    '〇': 'Deprecada'
+  })[emoji] || '';
+}
+
+/* ---------- COTIZACIÓN ---------- */
+function renderCotizacionPanel(node) {
+  const recId = node._data.sourceRecordId;
+  const rec = allCotizaciones.find(c => c.id === recId);
+  if (!rec) return renderMissingSource(node, 'Cotizaciones');
+
+  const f = rec.fields;
+  const name = f.Name || f.Title || node._data.label;
+  const vendor = f.Vendor || '';
+  const amount = f.Amount;
+  const quoteId = f.QuoteID || '';
+  const group = f.Group || '';
+  const url = f.URL || '';
+  const status = (f.Status || '').toString();
+  const statusEmoji = ['🔴','🟡','🟢','🔵'].find(e => status.startsWith(e)) || '';
+  const meta = !!f['Pagado por METAMORFOSIS'];
+
+  // Resolve linked Areas (the legacy text/multi-select 'Areas' field on Cotizaciones)
+  let areasDisplay = '';
+  if (Array.isArray(f.Areas)) {
+    areasDisplay = f.Areas.join(', ');
+  } else if (f.Areas) {
+    areasDisplay = String(f.Areas);
+  }
+
+  let html = `<div class="dp-title">${escapeHtml(name)}</div>`;
+
+  html += renderStatusEditor(statusEmoji, 'cotizacion');
+
+  if (meta) {
+    html += `<div class="dp-status-row">
+      <span class="dp-status-pill meta">💜 Pagada por METAMORFOSIS</span>
+    </div>`;
+  }
+
+  html += `<div class="dp-fields">
+    ${dpField('Vendor', vendor)}
+    ${dpField('Monto', fmtCOP(amount), { amount: true, raw: true })}
+    ${dpField('Quote ID', quoteId)}
+    ${dpField('Grupo', group)}
+    ${dpField('Áreas', areasDisplay, { full: true })}
+  </div>`;
+
+  // Drive Links (new unified attachment system) + legacy URL fallback
+  html += renderDriveLinks(f['Drive Links'], url);
+
+  return html;
+}
+
+/* ---------- CORTE (payment-document style) ---------- */
+function renderCortePanel(node) {
+  const recId = node._data.sourceRecordId;
+  const rec = allCortes.find(c => c.id === recId);
+  if (!rec) return renderMissingSource(node, 'Cortes');
+
+  const f = rec.fields;
+  const name = f.Name || node._data.label;
+  const number = f.Number;
+  const date = f.Date;
+  const amount = f.Amount;
+  const status = (f.Status || '').toString();
+  const statusEmoji = ['🔴','🟡','🟢','🔵'].find(e => status.startsWith(e)) || '';
+  const notes = (f.Notes || '').trim();
+  const areaName = pAreaPrimaryName(f.pArea) || '';
+  // Some Cortes records may also have legacy fields — show them if present
+  const item = f.item || f.CONCEPTO || f.descripcion || '';
+  const ubic = f.UBICACION || '';
+
+  let html = `<div class="dp-title">${escapeHtml(name)}</div>`;
+
+  html += `<div class="dp-status-row">`;
+  if (statusEmoji) html += `<span class="dp-status-pill">${statusEmoji} ${escapeHtml(status.replace(statusEmoji,'').trim())}</span>`;
+  if (number != null) html += `<span class="dp-status-pill">№ ${escapeHtml(String(number))}</span>`;
+  html += `</div>`;
+
+  html += `<div class="dp-fields">
+    ${dpField('Monto', fmtCOP(amount), { amount: true, raw: true })}
+    ${dpField('Fecha', fmtDate(date))}
+    ${dpField('Área', areaName, { full: true })}
+    ${item ? dpField('Concepto', item, { full: true }) : ''}
+    ${ubic ? dpField('Ubicación', ubic, { full: true }) : ''}
+  </div>`;
+
+  if (notes) {
+    html += dpSection('Notas', `<div class="dp-notes-box">${escapeHtml(notes)}</div>`);
+  }
+
+  // Drive Links section
+  html += renderDriveLinks(f['Drive Links']);
+
+  return html;
+}
+
+/* ---------- ÁREA DE PROYECTO ---------- */
+function renderAreaPanel(node) {
+  const recId = node._data.sourceRecordId;
+  const rec = allAreas.find(a => a.id === recId);
+  if (!rec) return renderMissingSource(node, 'Project Areas');
+
+  const f = rec.fields;
+  const name = f.Name || node._data.label;
+  const original = f['Original Delivery'];
+  const estimated = f['Estimated Delivery'];
+  const order = f.Order;
+  const status = (f.Status || '').toString();
+  const statusEmoji = ['🔴','🟡','🟢'].find(e => status.startsWith(e)) || '';
+  const notes = (f.Notes || '').trim();
+  const budgetNoAd = f['Budget No Adicional'];
+  const budgetAd = f['Budget Adicional'];
+
+  // Compute live progress from activities in this area (matches main app's logic)
+  const myActs = allActividades.filter(a => pAreaIds(a.fields.pArea).includes(rec.id));
+  const nonDeprecated = myActs.filter(a => (a.fields.Status || '〇') !== '〇');
+  let progress = '';
+  if (nonDeprecated.length) {
+    const sum = nonDeprecated.reduce((acc, a) => {
+      const p = Number(a.fields.Progress) || 0;
+      return acc + (p <= 1 ? p * 100 : p);
+    }, 0);
+    progress = `${Math.round(sum / nonDeprecated.length)}%`;
+  }
+
+  let html = `<div class="dp-title">${escapeHtml(name)}</div>`;
+
+  html += `<div class="dp-status-row">`;
+  if (statusEmoji) html += `<span class="dp-status-pill">${statusEmoji} ${escapeHtml(status.replace(statusEmoji,'').trim())}</span>`;
+  if (progress) html += `<span class="dp-status-pill">📊 ${escapeHtml(progress)}</span>`;
+  if (order != null) html += `<span class="dp-status-pill">Orden ${escapeHtml(String(order))}</span>`;
+  html += `</div>`;
+
+  html += `<div class="dp-fields">
+    ${dpField('Entrega original', fmtDate(original))}
+    ${dpField('Entrega estimada', fmtDate(estimated))}
+    ${budgetNoAd != null && budgetNoAd !== '' ? dpField('Presupuesto inicial', fmtCOP(budgetNoAd), { amount: true, raw: true }) : ''}
+    ${budgetAd != null && budgetAd !== '' ? dpField('Presupuesto adicionales', fmtCOP(budgetAd), { amount: true, raw: true }) : ''}
+    ${dpField('Actividades', `${myActs.length} (${nonDeprecated.length} activas)`, { full: true })}
+  </div>`;
+
+  if (notes) {
+    html += dpSection('Notas', `<div class="dp-notes-box">${escapeHtml(notes)}</div>`);
+  }
+
+  // Drive Links if present
+  html += renderDriveLinks(f['Drive Links']);
+
+  return html;
+}
+
+/* ---------- HITO ---------- */
+function renderHitoPanel(node) {
+  const label = node._data.label;
+  const notes = (node._data.notes || '').trim();
+  const weekNum = extractWeekNumber(label);
+  const isCurrent = weekNum != null && CURRENT_WEEK != null && weekNum === CURRENT_WEEK;
+
+  let html = `<div class="dp-title">${escapeHtml(label)}</div>`;
+
+  if (weekNum != null) {
+    html += `<div class="dp-status-row">
+      <span class="dp-status-pill">🗓️ Semana ${weekNum}</span>
+      ${isCurrent ? `<span class="dp-status-pill" style="background:#fef3c7;color:#92400e;">📍 Semana actual</span>` : ''}
+      ${CURRENT_WEEK != null && weekNum > CURRENT_WEEK ? `<span class="dp-status-pill">⏱ Hace ${weekNum - CURRENT_WEEK} semana${weekNum - CURRENT_WEEK === 1 ? '' : 's'}</span>` : ''}
+      ${CURRENT_WEEK != null && weekNum < CURRENT_WEEK ? `<span class="dp-status-pill">⏳ En ${CURRENT_WEEK - weekNum} semana${CURRENT_WEEK - weekNum === 1 ? '' : 's'}</span>` : ''}
+    </div>`;
+  }
+
+  if (notes) {
+    html += dpSection('Notas', `<div class="dp-notes-box">${escapeHtml(notes)}</div>`);
+  } else {
+    html += `<div class="dp-field-value empty" style="margin-top:12px;">Sin notas. Tip: usa clic-derecho → Editar etiqueta.</div>`;
+  }
+
+  return html;
+}
+
+/* ---------- DECISION / CUSTOM (free-form) ---------- */
+function renderFreeformPanel(node) {
+  const label = node._data.label;
+  const notes = (node._data.notes || '').trim();
+
+  let html = `<div class="dp-title">${escapeHtml(label)}</div>`;
+
+  // Show connection counts as a quick context indicator
+  const connectedEdges = network.getConnectedEdges(node.id);
+  const connectedNodes = network.getConnectedNodes(node.id);
+  if (connectedEdges.length || connectedNodes.length) {
+    html += `<div class="dp-status-row">
+      <span class="dp-status-pill">↔ ${connectedNodes.length} conexión${connectedNodes.length === 1 ? '' : 'es'}</span>
+    </div>`;
+  }
+
+  if (notes) {
+    html += dpSection('Notas', `<div class="dp-notes-box">${escapeHtml(notes)}</div>`);
+  } else {
+    html += `<div class="dp-field-value empty" style="margin-top:12px;">Sin notas.</div>`;
+  }
+
+  return html;
+}
+
+/* ---------- Fallback when source record can't be found ---------- */
+function renderMissingSource(node, tableLabel) {
+  return `<div class="dp-title">${escapeHtml(node._data.label)}</div>
+    <div class="dp-status-row">
+      <span class="dp-status-pill" style="background:#fee2e2;color:#991b1b;">⚠ Origen no encontrado</span>
+    </div>
+    <div class="dp-field-value" style="margin-top:12px;">
+      Este nodo apunta a un registro en <b>${escapeHtml(tableLabel)}</b> que ya no existe o fue eliminado.
+      Puedes eliminar el nodo del grafo con clic-derecho → Eliminar nodo.
+    </div>`;
+}
+
+// Warn before leaving with unsaved changes
+window.addEventListener('beforeunload', (e) => {
+  if (isDirty()) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+// Go!
+init();
+</script>
+</body>
+</html>
