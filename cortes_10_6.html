@@ -1,0 +1,2559 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Cortes — Estación Central</title>
+<style>
+  :root {
+    --topbar-h: 38px;
+    --controls-h: 38px;
+    --thead-row1-top: calc(var(--topbar-h) + var(--controls-h));
+    --thead-row2-top: calc(var(--topbar-h) + var(--controls-h) + 24px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f7f7f5;
+    color: #1a1a1a;
+    font-size: 13px;
+    overscroll-behavior: none;
+  }
+
+  /* ============= TOP BAR ============= */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: #1a1a1a; color: #fff;
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .topbar h1 {
+    font-size: 14px; font-weight: 600; margin: 0;
+    letter-spacing: 0.3px;
+  }
+  .topbar .spacer { flex: 1; }
+  .topbar button {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    color: #fff; padding: 5px 10px; border-radius: 5px;
+    font-size: 11px; cursor: pointer; font-weight: 500;
+  }
+  .topbar button:hover { background: rgba(255,255,255,0.18); }
+  .status {
+    font-size: 11px; color: rgba(255,255,255,0.7);
+  }
+
+  /* ============= CONTROLS BAR ============= */
+  .controls {
+    background: #fff;
+    border-bottom: 1px solid #e5e5e3;
+    padding: 8px 14px;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    position: sticky; top: 38px; z-index: 90;
+  }
+  .controls button {
+    background: #fff; border: 1px solid #d4d4d0;
+    padding: 4px 10px; border-radius: 5px;
+    font-size: 11px; cursor: pointer;
+    color: #4a4a48; font-weight: 500;
+  }
+  .controls button:hover { background: #f7f7f5; border-color: #888; }
+  .controls button.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .controls .sep {
+    width: 1px; height: 18px; background: #e5e5e3; margin: 0 4px;
+  }
+  .controls .label {
+    font-size: 10px; text-transform: uppercase; color: #888; font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .controls input[type="search"] {
+    border: 1px solid #d4d4d0; border-radius: 5px;
+    padding: 4px 8px; font-size: 12px; width: 160px;
+    font-family: inherit;
+  }
+  .controls input[type="search"]:focus { outline: none; border-color: #888; }
+  .controls select {
+    border: 1px solid #d4d4d0; border-radius: 5px;
+    padding: 4px 6px; font-size: 12px;
+    font-family: inherit; background: #fff; cursor: pointer;
+  }
+  .controls select:focus { outline: none; border-color: #888; }
+
+  /* Color toggle buttons (per-theme on/off) and overdraft filter buttons */
+  .controls .color-toggle {
+    padding: 4px 7px; font-size: 13px; line-height: 1;
+    opacity: 0.35; filter: grayscale(0.6);
+  }
+  .controls .color-toggle.active {
+    opacity: 1; filter: none;
+    background: #fff; border-color: #999;
+  }
+  .controls .od-filter-btn { /* inherits .controls button */ }
+  .controls .od-filter-btn.active {
+    background: #1a1a1a; color: #fff; border-color: #1a1a1a;
+  }
+
+  /* ============= LOADING / ERROR ============= */
+  .loader, .error {
+    padding: 60px 20px; text-align: center; color: #888; font-size: 14px;
+  }
+  .error { color: #c0392b; background: #fef0ef; border-left: 3px solid #c0392b; padding: 16px; }
+
+  /* ============= MATRIX TABLE ============= */
+  .matrix-wrap {
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    background: #fff;
+  }
+  table.matrix {
+    border-collapse: collapse;
+    font-size: 11.5px;
+    width: max-content; min-width: 100%;
+  }
+  table.matrix th, table.matrix td {
+    border: 1px solid #e8e8e5;
+    padding: 4px 6px;
+    text-align: left;
+    vertical-align: top;
+    white-space: nowrap;
+  }
+
+  /* HEADER ROWS */
+  table.matrix thead th {
+    background: #f0efea;
+    font-weight: 600;
+    color: #2a2a28;
+    position: sticky;
+    z-index: 85;
+    font-size: 10.5px;
+  }
+  table.matrix thead tr:nth-child(1) th { top: var(--thead-row1-top); }
+  table.matrix thead tr:nth-child(2) th { top: var(--thead-row2-top); }
+  table.matrix thead th.corte-group {
+    text-align: center;
+    background: #e8e8e0;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid #c0c0b8;
+  }
+  table.matrix thead th.corte-group:hover { background: #dcdcd0; }
+  table.matrix thead th.corte-group.expanded { background: #d8d8c8; }
+  table.matrix thead th.corte-sub {
+    background: #f5f5f0;
+    font-size: 9.5px;
+    font-weight: 500;
+    color: #555;
+    text-align: right;
+  }
+
+  /* STICKY LEFT COLUMNS */
+  .col-id { position: sticky; left: 0; background: #fff; z-index: 40; min-width: 75px; max-width: 75px; }
+  .col-desc { position: sticky; left: 75px; background: #fff; z-index: 40; min-width: 240px; max-width: 280px; white-space: normal; }
+  thead .col-id { z-index: 86; background: #f0efea; }
+  thead .col-desc { z-index: 86; background: #f0efea; }
+
+  /* GROUP HEADERS — master, pArea, cat, cat_sub, deeper
+     Group rows now contain real per-corte cells, so only the label cell
+     is sticky-left; numeric cells flow with the rest of the table. */
+
+  tr.group-master td { background: #0a3d2a; color: #fff; border: 1px solid #052218; padding: 9px 6px; font-size: 12px; font-weight: 600; }
+  tr.group-master td.group-label { padding: 9px 8px; font-weight: 600; font-size: 13px; position: sticky; left: 0; z-index: 36; letter-spacing: 0.3px; }
+  tr.group-master { cursor: pointer; }
+  tr.group-master:hover td { background: #135a3e; }
+  tr.group-master .toggle { display: inline-block; width: 14px; color: #aaa; margin-right: 2px; }
+  tr.group-master .group-meta { color: rgba(255,255,255,0.7); }
+  tr.group-master td.divider-left { border-left: 2px solid #052218 !important; }
+
+  /* AIU rows — derived overlays below master */
+  tr.group-aiu td { background: #f0efe8; color: #2a2a28; border: 1px solid #d4d3cc; padding: 4px 6px; font-size: 10.5px; font-weight: 500; }
+  tr.group-aiu td.group-label { padding: 4px 8px 4px 26px; font-size: 11px; position: sticky; left: 0; z-index: 35; background: #f0efe8; }
+  tr.group-aiu .aiu-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+  tr.group-aiu td.divider-left { border-left: 2px solid #b8b8b0 !important; }
+
+  /* TOTAL FACTURABLE row — emphasized below AIU */
+  tr.group-facturable td { background: #1f5f48; color: #fff; border: 1px solid #154130; padding: 7px 6px; font-size: 11.5px; font-weight: 600; }
+  tr.group-facturable td.group-label { padding: 7px 8px; position: sticky; left: 0; z-index: 35; background: #1f5f48; }
+  tr.group-facturable .group-meta { color: rgba(255,255,255,0.7); margin-left: 6px; }
+  tr.group-facturable td.divider-left { border-left: 2px solid #154130 !important; }
+  tr.group-facturable td .pct-sub { color: rgba(255,255,255,0.75); }
+
+  /* AMORTIZACIONES row — red deduction */
+  tr.group-amort td { background: #faecea; color: #8b2e2e; border: 1px solid #e8c8c4; padding: 5px 6px; font-size: 11px; font-weight: 600; }
+  tr.group-amort td.group-label { padding: 5px 8px 5px 26px; position: sticky; left: 0; z-index: 35; background: #faecea; }
+  tr.group-amort .group-meta { color: #b86359; margin-left: 6px; font-weight: 400; }
+  tr.group-amort td.divider-left { border-left: 2px solid #d9aea8 !important; }
+
+  /* NETO PAGABLE row — emphasized below amortizaciones */
+  tr.group-neto td { background: #1a4b78; color: #fff; border: 1px solid #102f50; padding: 7px 6px; font-size: 11.5px; font-weight: 600; }
+  tr.group-neto td.group-label { padding: 7px 8px; position: sticky; left: 0; z-index: 35; background: #1a4b78; }
+  tr.group-neto .group-meta { color: rgba(255,255,255,0.7); margin-left: 6px; font-weight: 400; }
+  tr.group-neto td.divider-left { border-left: 2px solid #102f50 !important; }
+  tr.group-neto td .pct-sub { color: rgba(255,255,255,0.75); }
+
+  tr.group-area td { background: #2a2a28; color: #fff; border: 1px solid #1a1a1a; padding: 7px 6px; font-size: 11px; font-weight: 600; }
+  tr.group-area td.group-label { padding: 7px 8px; font-weight: 600; font-size: 11.5px; position: sticky; left: 0; z-index: 35; }
+  tr.group-area { cursor: pointer; }
+  tr.group-area:hover td { background: #3a3a38; }
+  tr.group-area .toggle { display: inline-block; width: 14px; color: #ccc; margin-right: 2px; }
+
+  tr.group-cat td { background: #4a4a48; color: #fff; border: 1px solid #3a3a38; padding: 5px 6px; font-size: 10.5px; font-weight: 500; }
+  tr.group-cat td.group-label { padding: 5px 8px; font-weight: 500; font-size: 11px; position: sticky; left: 0; z-index: 35; }
+  tr.group-cat { cursor: pointer; }
+  tr.group-cat:hover td { background: #5a5a58; }
+
+  tr.group-subcat td { background: #888; color: #fff; border: 1px solid #777; padding: 4px 6px; font-size: 10px; font-weight: 500; }
+  tr.group-subcat td.group-label { padding: 4px 8px; font-weight: 500; font-size: 10.5px; position: sticky; left: 0; z-index: 35; }
+  tr.group-subcat { cursor: pointer; }
+  tr.group-subcat:hover td { background: #999; }
+
+  tr.group-deep td { background: #b0b0a8; color: #2a2a28; border: 1px solid #a0a098; padding: 3px 6px; font-size: 9.5px; font-weight: 500; }
+  tr.group-deep td.group-label { padding: 3px 8px; font-size: 10px; position: sticky; left: 0; z-index: 35; }
+  tr.group-deep { cursor: pointer; }
+  tr.group-deep:hover td { background: #c0c0b8; }
+  tr.group-deep .toggle { color: #555; }
+
+  tr.group-cat .toggle, tr.group-subcat .toggle { display: inline-block; width: 14px; color: #ccc; margin-right: 2px; }
+
+  /* Group numeric cells: right-aligned, no extra hover highlight */
+  td.group-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.group-num .pct-sub {
+    display: block;
+    font-size: 9.5px;
+    font-weight: 400;
+    opacity: 0.75;
+    margin-top: 1px;
+  }
+  .group-meta { opacity: 0.65; font-weight: 400; margin-left: 4px; }
+
+  /* VERTICAL DIVIDERS — separators between OG section, each corte, and % avance */
+  .divider-left { border-left: 2px solid #c8c8c0 !important; }
+  thead th.divider-left { border-left: 2px solid #a0a098 !important; }
+  tr.group-area td.divider-left { border-left: 2px solid #1a1a1a !important; }
+  tr.group-cat td.divider-left { border-left: 2px solid #3a3a38 !important; }
+  tr.group-subcat td.divider-left { border-left: 2px solid #777 !important; }
+  tr.group-deep td.divider-left { border-left: 2px solid #909088 !important; }
+
+  /* PARTIDA ROWS */
+  tr.row-partida td {
+    background: #fff;
+  }
+  tr.row-partida:nth-child(odd) td { background: #fafaf7; }
+  tr.row-partida:hover td { background: #fff8e0 !important; }
+  tr.row-partida .col-id { font-weight: 600; color: #444; font-size: 10.5px; }
+  tr.row-partida.is-add .col-id { color: #b85515; }
+  tr.row-partida.is-tbd .col-id { color: #888; font-style: italic; }
+  tr.row-partida .col-desc {
+    font-size: 11px; color: #2a2a2a; line-height: 1.3;
+    max-width: 280px; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* ROW STATUS THEMES — five mutually-exclusive states per partida:
+     untouched (no theme), in-progress (green), completed (blue),
+     overdraft-yellow (compliant, within proyectado), overdraft-red (over proyectado).
+     Anomaly (🚩) is an independent flag and coexists with any of the above.
+     Each theme can be independently toggled off via body classes:
+       .no-color-overdraft       — hides red & yellow themes
+       .no-color-completed       — hides blue theme
+       .no-color-inprogress      — hides green theme
+       .no-color-corte-highlight — hides the corte-column band (handled in JS) */
+
+  /* RED — beyond proyectado (true alert). Red text on red wash. */
+  body:not(.no-color-overdraft) tr.row-partida.status-overdraft-red td {
+    background: #fdebe9 !important;
+    color: #8b2e2e;
+  }
+  body:not(.no-color-overdraft) tr.row-partida.status-overdraft-red:nth-child(odd) td { background: #fbe1de !important; }
+  body:not(.no-color-overdraft) tr.row-partida.status-overdraft-red:hover td { background: #f7c5bf !important; }
+  body:not(.no-color-overdraft) tr.row-partida.status-overdraft-red .col-id {
+    color: #8b2e2e;
+    border-left: 3px solid #c0392b;
+    padding-left: 4px;
+  }
+  body:not(.no-color-overdraft) tr.row-partida.status-overdraft-red .col-desc { color: #8b2e2e; }
+
+  /* YELLOW — over contracted, within proyectado. Yellow wash, RED TEXT for emphasis. */
+  body:not(.no-color-overdraft) tr.row-partida.status-overdraft-yellow td {
+    background: #fff5d6 !important;
+    color: #c0392b;
+  }
+  body:not(.no-color-overdraft) tr.row-partida.status-overdraft-yellow:nth-child(odd) td { background: #fcedc4 !important; }
+  body:not(.no-color-overdraft) tr.row-partida.status-overdraft-yellow:hover td { background: #f8dc8b !important; }
+  body:not(.no-color-overdraft) tr.row-partida.status-overdraft-yellow .col-id {
+    color: #c0392b;
+    border-left: 3px solid #d4a017;
+    padding-left: 4px;
+  }
+  body:not(.no-color-overdraft) tr.row-partida.status-overdraft-yellow .col-desc { color: #c0392b; }
+
+  /* BLUE — completed (cumExec ≥ contracted). Subtle blue tint. */
+  body:not(.no-color-completed) tr.row-partida.status-completed td {
+    background: #e8f1fa !important;
+    color: #1a4b78;
+  }
+  body:not(.no-color-completed) tr.row-partida.status-completed:nth-child(odd) td { background: #dde9f4 !important; }
+  body:not(.no-color-completed) tr.row-partida.status-completed:hover td { background: #c8dcef !important; }
+  body:not(.no-color-completed) tr.row-partida.status-completed .col-id {
+    color: #1a4b78;
+    border-left: 3px solid #2a7fc7;
+    padding-left: 4px;
+  }
+  body:not(.no-color-completed) tr.row-partida.status-completed .col-desc { color: #1a4b78; }
+
+  /* GREEN — in-progress (has execution, below contracted). Subtle green tint. */
+  body:not(.no-color-inprogress) tr.row-partida.status-in-progress td {
+    background: #e8f4ec !important;
+    color: #1f5f3a;
+  }
+  body:not(.no-color-inprogress) tr.row-partida.status-in-progress:nth-child(odd) td { background: #ddedde !important; }
+  body:not(.no-color-inprogress) tr.row-partida.status-in-progress:hover td { background: #c5e0c9 !important; }
+  body:not(.no-color-inprogress) tr.row-partida.status-in-progress .col-id {
+    color: #1f5f3a;
+    border-left: 3px solid #3a8c5a;
+    padding-left: 4px;
+  }
+  body:not(.no-color-inprogress) tr.row-partida.status-in-progress .col-desc { color: #1f5f3a; }
+
+  /* Anomaly flag — independent of status, prepended to itemID */
+  tr.row-partida.has-anomaly .col-id::before {
+    content: '🚩 ';
+    margin-right: 2px;
+  }
+
+  /* Group rows: matching status colors as left-edge shadows + emoji */
+  body:not(.no-color-overdraft) tr.group-area.status-overdraft-red td.group-label,
+  body:not(.no-color-overdraft) tr.group-cat.status-overdraft-red td.group-label,
+  body:not(.no-color-overdraft) tr.group-subcat.status-overdraft-red td.group-label,
+  body:not(.no-color-overdraft) tr.group-deep.status-overdraft-red td.group-label {
+    box-shadow: inset 4px 0 0 #c0392b;
+  }
+  body:not(.no-color-overdraft) tr.group-area.status-overdraft-yellow td.group-label,
+  body:not(.no-color-overdraft) tr.group-cat.status-overdraft-yellow td.group-label,
+  body:not(.no-color-overdraft) tr.group-subcat.status-overdraft-yellow td.group-label,
+  body:not(.no-color-overdraft) tr.group-deep.status-overdraft-yellow td.group-label {
+    box-shadow: inset 4px 0 0 #d4a017;
+  }
+  body:not(.no-color-completed) tr.group-area.status-completed td.group-label,
+  body:not(.no-color-completed) tr.group-cat.status-completed td.group-label,
+  body:not(.no-color-completed) tr.group-subcat.status-completed td.group-label,
+  body:not(.no-color-completed) tr.group-deep.status-completed td.group-label {
+    box-shadow: inset 4px 0 0 #2a7fc7;
+  }
+  body:not(.no-color-inprogress) tr.group-area.status-in-progress td.group-label,
+  body:not(.no-color-inprogress) tr.group-cat.status-in-progress td.group-label,
+  body:not(.no-color-inprogress) tr.group-subcat.status-in-progress td.group-label,
+  body:not(.no-color-inprogress) tr.group-deep.status-in-progress td.group-label {
+    box-shadow: inset 4px 0 0 #3a8c5a;
+  }
+  body:not(.no-color-overdraft) tr.group-area.status-overdraft-red td.group-label::after,
+  body:not(.no-color-overdraft) tr.group-cat.status-overdraft-red td.group-label::after,
+  body:not(.no-color-overdraft) tr.group-subcat.status-overdraft-red td.group-label::after,
+  body:not(.no-color-overdraft) tr.group-deep.status-overdraft-red td.group-label::after {
+    content: ' ⚠';
+    color: #ff6b5a;
+    font-size: 12px;
+    margin-left: 4px;
+  }
+  body:not(.no-color-overdraft) tr.group-area.status-overdraft-yellow td.group-label::after,
+  body:not(.no-color-overdraft) tr.group-cat.status-overdraft-yellow td.group-label::after,
+  body:not(.no-color-overdraft) tr.group-subcat.status-overdraft-yellow td.group-label::after,
+  body:not(.no-color-overdraft) tr.group-deep.status-overdraft-yellow td.group-label::after {
+    content: ' ⚠';
+    color: #d4a017;
+    font-size: 12px;
+    margin-left: 4px;
+  }
+
+  /* Master row status indicators */
+  body:not(.no-color-overdraft) tr.group-master.status-overdraft-red td.group-label {
+    box-shadow: inset 6px 0 0 #ff4136;
+  }
+  body:not(.no-color-overdraft) tr.group-master.status-overdraft-red td.group-label::after {
+    content: ' ⚠ contiene sobrecostos sobre proyectado';
+    color: #ff9b8a; font-size: 11px; font-weight: 500; margin-left: 8px; letter-spacing: 0.3px;
+  }
+  body:not(.no-color-overdraft) tr.group-master.status-overdraft-yellow td.group-label {
+    box-shadow: inset 6px 0 0 #d4a017;
+  }
+  body:not(.no-color-overdraft) tr.group-master.status-overdraft-yellow td.group-label::after {
+    content: ' ⚠ sobrecostos dentro de proyectado';
+    color: #f0c850; font-size: 11px; font-weight: 500; margin-left: 8px; letter-spacing: 0.3px;
+  }
+  body:not(.no-color-completed) tr.group-master.status-completed td.group-label {
+    box-shadow: inset 6px 0 0 #2a7fc7;
+  }
+  body:not(.no-color-inprogress) tr.group-master.status-in-progress td.group-label {
+    box-shadow: inset 6px 0 0 #3a8c5a;
+  }
+
+  /* Anomaly indicator on group rows (independent of color toggles) */
+  tr.group-area.has-anomaly .group-meta::before,
+  tr.group-cat.has-anomaly .group-meta::before,
+  tr.group-subcat.has-anomaly .group-meta::before,
+  tr.group-deep.has-anomaly .group-meta::before,
+  tr.group-master.has-anomaly .group-meta::before {
+    content: '🚩 ';
+  }
+
+  /* CORTE COLUMN HIGHLIGHT is applied via a dynamic <style> tag (see JS).
+     It uses background-color only — never position or box-shadow — so it can't
+     break the sticky header. Row-level coloring (overdraft red/yellow, group
+     row colors) always takes prevalence because those use !important or apply
+     to non-partida rows that the highlight doesn't target. */
+
+  td.num { text-align: right; font-variant-numeric: tabular-nums; font-size: 11px; }
+  td.num.zero { color: #c4c4c0; }
+  td.num.neg { color: #c0392b; }
+  td.num.over { background: #fdebe7; color: #b03a1f; font-weight: 600; }
+  td.num.under { color: #2a7f5f; }
+
+  .col-birth { text-align: center; min-width: 38px; font-variant-numeric: tabular-nums; font-size: 10.5px; color: #666; }
+  .col-birth.is-add { color: #b85515; font-weight: 600; }
+  .col-birth.is-tbd { color: #888; font-style: italic; }
+  .col-unit { min-width: 36px; text-align: center; color: #777; font-size: 10.5px; }
+  .col-qty, .col-cost { min-width: 90px; }
+
+  /* HIDDEN STATE */
+  .hidden-row { display: none; }
+  .hidden-col { display: none; }
+
+  /* SUMMARY FOOTER */
+  .summary {
+    margin: 14px;
+    padding: 14px;
+    background: #fff;
+    border: 1px solid #e5e5e3;
+    border-radius: 6px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .stat {
+    padding: 10px 12px;
+    background: #fafaf7;
+    border-radius: 5px;
+    border-left: 3px solid #888;
+  }
+  .stat.og { border-left-color: #2a2a28; }
+  .stat.add { border-left-color: #c0392b; }
+  .stat.add .val { color: #c0392b; }
+  .stat.tbd { border-left-color: #c0392b; }
+  .stat.tbd .val { color: #c0392b; }
+  .stat.total { border-left-color: #2a7f5f; }
+  .stat.saldo-og { border-left-color: #4a4a48; background: #f5f5f0; }
+  .stat.saldo-og .val { color: #1a1a1a; }
+  .stat.saldo-proy { border-left-color: #0a3d2a; background: #f0f5f1; }
+  .stat.saldo-proy .val { color: #0a3d2a; }
+  .stat .lbl { font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: 0.5px; font-weight: 600; }
+  .stat .val { font-size: 16px; font-weight: 600; color: #1a1a1a; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .stat .sub { font-size: 10.5px; color: #888; margin-top: 2px; }
+
+  /* ============= S-CURVE GRAPH ============= */
+  .s-curve {
+    margin: 14px;
+    padding: 16px 18px 12px;
+    background: #fff;
+    border: 1px solid #e5e5e3;
+    border-radius: 6px;
+  }
+  .s-curve-title { margin-bottom: 6px; }
+  .s-curve-title h3 {
+    margin: 0; font-size: 13px; font-weight: 600;
+    color: #1a1a1a; letter-spacing: 0.2px;
+  }
+  .s-curve-sub {
+    font-size: 11px; color: #888; margin-top: 2px;
+  }
+  .s-curve-legend {
+    display: flex; flex-wrap: wrap; gap: 14px;
+    font-size: 11px; color: #555;
+    margin: 8px 0 4px;
+    align-items: center;
+  }
+  .s-curve-legend .legend-dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: -1px;
+  }
+  .s-curve-legend .legend-dash {
+    border-radius: 0;
+    width: 14px; height: 2px;
+    background-image: linear-gradient(to right, #888 50%, transparent 50%);
+    background-size: 6px 100%;
+    background-color: transparent !important;
+  }
+  .s-curve-total {
+    margin-left: auto;
+    font-size: 11px; color: #666;
+  }
+  .s-curve-total strong {
+    color: #0a3d2a;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ============= PARTIDA DETAIL DRAWER ============= */
+  .drawer-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1000;
+    display: none;
+    align-items: stretch;
+    justify-content: flex-end;
+  }
+  .drawer-overlay.open { display: flex; }
+  .drawer {
+    background: #fff;
+    width: 100%; max-width: 720px;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow: -4px 0 16px rgba(0,0,0,0.15);
+    animation: slideIn 0.18s ease-out;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  .drawer-header {
+    background: #1a1a1a; color: #fff;
+    padding: 14px 18px;
+    display: flex; align-items: flex-start; gap: 12px;
+    position: sticky; top: 0; z-index: 5;
+  }
+  .drawer-header h2 { margin: 0; font-size: 15px; font-weight: 600; flex: 1; }
+  .drawer-header .meta-line { font-size: 11px; color: rgba(255,255,255,0.6); margin-top: 4px; }
+  .drawer-close {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+    color: #fff; padding: 4px 10px; border-radius: 5px; cursor: pointer;
+    font-size: 13px;
+  }
+  .drawer-close:hover { background: rgba(255,255,255,0.25); }
+  .drawer-body { padding: 18px; }
+
+  .drawer-section { margin-bottom: 24px; }
+  .drawer-section h3 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;
+    color: #888; font-weight: 600; margin: 0 0 8px;
+    border-bottom: 1px solid #e5e5e3; padding-bottom: 4px;
+  }
+  .drawer-grid {
+    display: grid; grid-template-columns: 130px 1fr;
+    gap: 6px 12px; font-size: 12.5px;
+  }
+  .drawer-grid .k { color: #888; font-weight: 500; }
+  .drawer-grid .v { color: #1a1a1a; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .drawer-grid .v.big { font-size: 14px; font-weight: 600; }
+  .drawer-grid .v.add { color: #b85515; }
+  .drawer-grid .v.tbd { color: #888; font-style: italic; }
+
+  /* Status badge row in drawer */
+  .status-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .status-badge {
+    display: inline-block; padding: 5px 12px; border-radius: 4px;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.2px;
+    border: 1px solid currentColor;
+  }
+  .status-badge.anomaly { background: #fff8e8; color: #8a6500; border-color: #d4a017; }
+
+  /* Financials table — Original / Proyectado / Ejecutado coherent breakdown */
+  .financials-table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+    margin-top: 4px;
+  }
+  .financials-table th, .financials-table td {
+    border: 1px solid #e5e5e0; padding: 6px 10px;
+    text-align: right; font-variant-numeric: tabular-nums;
+  }
+  .financials-table th {
+    background: #f5f5f0; color: #555;
+    font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .financials-table td:first-child {
+    text-align: left; font-weight: 600; color: #555;
+    background: #fafaf6;
+  }
+  .financials-table tr.fin-og td:first-child { color: #1a1a1a; }
+  .financials-table tr.fin-add td:first-child { color: #b85515; }
+  .financials-table tr.fin-proy td:first-child { color: #555; background: #f0f5fa; }
+  .financials-table tr.fin-proy { background: #f6faff; }
+  .financials-table tr.fin-ejec td { background: #f8f5e8; border-top: 2px solid #c8b878; }
+  .financials-table tr.fin-ejec td:first-child { color: #5a4500; background: #f0e9c8; }
+  .financials-table tr.fin-ejec td strong { color: #5a4500; }
+
+  .traversal-table {
+    width: 100%; border-collapse: collapse; font-size: 11.5px;
+    margin-top: 8px;
+  }
+  .traversal-table th, .traversal-table td {
+    border: 1px solid #e8e8e5; padding: 5px 7px;
+    text-align: right; font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .traversal-table th {
+    background: #f0efea; color: #2a2a28;
+    font-weight: 600; font-size: 10.5px;
+    text-transform: uppercase; letter-spacing: 0.3px;
+  }
+  .traversal-table th:first-child { text-align: left; }
+  .traversal-table td:first-child { text-align: left; font-weight: 600; color: #444; }
+  .traversal-table tr.empty-corte td { color: #c4c4c0; }
+  .traversal-table tr.has-data td { background: #fff; }
+  .traversal-table tr.overdraft td { background: #fdebe7; color: #b03a1f; font-weight: 600; }
+  .traversal-table tr.first-overdraft td:first-child::before {
+    content: '⚠ '; color: #b03a1f;
+  }
+  .traversal-summary {
+    margin-top: 10px; padding: 10px 12px;
+    background: #fafaf7; border-radius: 5px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .traversal-summary .item {
+    font-size: 11px;
+  }
+  .traversal-summary .item .lbl { color: #888; text-transform: uppercase; font-size: 9.5px; letter-spacing: 0.5px; }
+  .traversal-summary .item .val { font-size: 14px; font-weight: 600; color: #1a1a1a; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .traversal-summary .item.warn .val { color: #b03a1f; }
+  .traversal-summary .item.ok .val { color: #2a7f5f; }
+
+  /* hover hint to indicate row is double-clickable */
+  tr.row-partida { cursor: pointer; }
+  tr.row-partida td.col-desc::after {
+    content: '';
+  }
+
+  @media (max-width: 600px) {
+    .topbar h1 { font-size: 12px; }
+    .controls { padding: 6px 10px; gap: 6px; }
+    .controls input[type="search"] { width: 110px; }
+    .col-desc { min-width: 160px; max-width: 200px; }
+    .drawer { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>CORTES — Estación Central</h1>
+  <div class="spacer"></div>
+  <span class="status" id="status-text">cargando…</span>
+  <button id="btn-reload" title="Recargar datos">↻</button>
+</div>
+
+<div class="controls">
+  <span class="label">Filas:</span>
+  <button id="btn-expand-all">+ Todo</button>
+  <button id="btn-collapse-subs">− Subs</button>
+  <button id="btn-collapse-all">− Todo</button>
+  <span class="sep"></span>
+  <span class="label">Mostrar:</span>
+  <button class="filter-btn active" data-filter="all">Todas</button>
+  <button class="filter-btn" data-filter="og">OG</button>
+  <button class="filter-btn" data-filter="add">Adicionales</button>
+  <button class="filter-btn" data-filter="tbd">TBD</button>
+  <span class="sep"></span>
+  <span class="label">Sobreejec:</span>
+  <button class="od-filter-btn active" data-odfilter="all">Todos</button>
+  <button class="od-filter-btn" data-odfilter="overdrafted">Sólo sobreejec.</button>
+  <button class="od-filter-btn" data-odfilter="clean">Sin sobreejec.</button>
+  <span class="sep"></span>
+  <span class="label">Colores:</span>
+  <button class="color-toggle active" data-toggle="overdraft" title="Sobreejecuciones (rojo/amarillo)">🔴/🟡</button>
+  <button class="color-toggle active" data-toggle="completed" title="Completados (azul)">🔵</button>
+  <button class="color-toggle active" data-toggle="inprogress" title="En ejecución (verde)">🟢</button>
+  <button class="color-toggle active" data-toggle="corte-highlight" title="Destacar columna del corte seleccionado">📊</button>
+  <span class="sep"></span>
+  <span class="label">Orden:</span>
+  <select id="sort-select" title="Ordenamiento de filas dentro de cada subgrupo">
+    <option value="og">OG (BOQ original)</option>
+    <option value="contracted">Contratado ↓</option>
+    <option value="proyectado">Proyectado ↓</option>
+    <option value="corte" disabled>Corte seleccionado ↓</option>
+    <option value="severity">Severidad ↓ (alertas primero)</option>
+  </select>
+  <span class="sep"></span>
+  <span class="label">Destacar corte:</span>
+  <select id="corte-highlight-select" title="Destacar visualmente las columnas de un corte específico">
+    <option value="0">— ninguno —</option>
+    <option value="1">Corte 01</option>
+    <option value="2">Corte 02</option>
+    <option value="3">Corte 03</option>
+    <option value="4">Corte 04</option>
+    <option value="5">Corte 05</option>
+    <option value="6">Corte 06</option>
+    <option value="7">Corte 07</option>
+    <option value="8">Corte 08</option>
+    <option value="9">Corte 09</option>
+    <option value="10">Corte 10</option>
+  </select>
+  <span class="sep"></span>
+  <span class="label">Buscar:</span>
+  <input type="search" id="search-input" placeholder="código o descripción…">
+</div>
+
+<style id="corte-highlight-dynamic"></style>
+
+<div id="content">
+  <div class="loader">cargando datos…</div>
+</div>
+
+<div id="drawer-overlay" class="drawer-overlay">
+  <div class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div style="flex:1;">
+        <h2 id="drawer-title">—</h2>
+        <div class="meta-line" id="drawer-meta">—</div>
+      </div>
+      <button class="drawer-close" id="drawer-close">✕ Cerrar</button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+  </div>
+</div>
+
+<script>
+/* ===========================================================
+   CONFIG — Airtable
+   =========================================================== */
+const AIRTABLE_API_KEY = 'pat8SF9w9X7yJCGyp.1ebcc53985c2bd9f8181d748623c3a4768f638da2d826840c6ed813e7e4bce4f';
+const AIRTABLE_BASE_ID = 'appMQxYmohtXSCvUn';
+const CONFIG_TABLE = 'Config';                       // master config table in Airtable
+const SHEETS_URL_CONFIG_KEY = 'SHEETS_CORTES_CSV_URL'; // key in Config table whose Value is the publish-to-web CSV URL
+
+const CORTES_TOTAL = 10;                          // matrix has 10 corte slots
+const PAREA_ORDER = ['Bar Piso 2', 'Cubierta', 'Cocina (Restaurante)', 'Restaurante', 'PUB', 'Bar HI END'];
+
+// AIU and IVA percentages on direct cost (obra civil)
+const AIU_ADMIN_PCT  = 0.11;   // Administración
+const AIU_IMPREV_PCT = 0.01;   // Imprevistos
+const AIU_UTIL_PCT   = 0.03;   // Utilidad
+const IVA_ON_UTIL    = 0.19;   // IVA sobre Utilidad
+// Total multiplier on direct cost:
+// 1 + 0.11 + 0.01 + 0.03 + 0.03*0.19 = 1.1557
+const AIU_MULTIPLIER = 1 + AIU_ADMIN_PCT + AIU_IMPREV_PCT + AIU_UTIL_PCT + (AIU_UTIL_PCT * IVA_ON_UTIL);
+
+// Compute A, I, U, IVA layers from a direct amount
+function computeAIULayers(direct) {
+  const a   = direct * AIU_ADMIN_PCT;
+  const i   = direct * AIU_IMPREV_PCT;
+  const u   = direct * AIU_UTIL_PCT;
+  const iva = u * IVA_ON_UTIL;
+  return { a, i, u, iva, total: direct + a + i + u + iva };
+}
+
+// Visual colors for AIU layers (used in both table indicator dots and chart bars)
+const AIU_COLORS = {
+  og:    '#0a3d2a',  // direct OG (dark green)
+  add:   '#c0392b',  // direct ADD (red)
+  a:     '#6b7a8f',  // Administración (muted blue-gray)
+  i:     '#b89968',  // Imprevistos (muted amber)
+  u:     '#5a8e85',  // Utilidad (muted teal)
+  iva:   '#7a6b8f',  // IVA on U (muted purple)
+  amort: '#8b2e2e',  // Amortizaciones (deep red)
+  neto:  '#1a6ba8',  // Neto cumulative curve (blue)
+};
+
+/* ===========================================================
+   STATE
+   =========================================================== */
+let ALL_RECORDS = [];           // raw rows from Airtable
+let PARTIDAS = [];              // filtered to HEADER=false, W+/Z excluded
+let AMORTIZACIONES = [];        // per-corte amortization amounts extracted from Z-* rows
+let EXPANDED_CORTES = new Set();// which corte numbers are expanded to sub-cols
+let COLLAPSED_GROUPS = new Set();// which groupKeys are collapsed
+let CURRENT_FILTER = 'all';     // all | og | add | tbd
+let OVERDRAFT_FILTER = 'all';   // all | overdrafted | clean
+let SORT_BY = 'og';             // og | contracted | proyectado | corte | severity
+let SEARCH_TERM = '';
+let HIGHLIGHTED_CORTE = 0;      // 0 = none; otherwise corte number 1..10 to visually highlight
+
+/* ===========================================================
+   HELPERS
+   =========================================================== */
+const fmtCOP = n => {
+  if (n == null || isNaN(n) || n === 0) return '';
+  return '$' + Math.round(n).toLocaleString('es-CO');
+};
+const fmtCOPfull = n => {
+  if (n == null || isNaN(n)) return '—';
+  return '$' + Math.round(n).toLocaleString('es-CO');
+};
+const fmtNum = n => {
+  if (n == null || isNaN(n) || n === 0) return '';
+  return Number(n).toLocaleString('es-CO', { maximumFractionDigits: 2 });
+};
+
+const setStatus = msg => {
+  const el = document.getElementById('status-text');
+  if (el) el.textContent = msg;
+};
+
+// Safely read field — Airtable may return linked records as arrays of strings/objects
+const readField = (rec, name) => {
+  const v = rec.fields[name];
+  if (v == null) return null;
+  if (Array.isArray(v)) {
+    if (v.length === 0) return null;
+    if (typeof v[0] === 'string') return v[0];
+    if (v[0] && v[0].name) return v[0].name;
+    return v[0];
+  }
+  return v;
+};
+const readFieldString = (rec, name) => {
+  const v = readField(rec, name);
+  return v == null ? '' : String(v);
+};
+const readFieldNum = (rec, name) => {
+  const v = readField(rec, name);
+  if (v == null || v === '') return null;
+  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+  return isNaN(n) ? null : n;
+};
+const readFieldBool = (rec, name) => {
+  const v = readField(rec, name);
+  if (v === true || v === 1) return true;
+  if (typeof v === 'string') {
+    const s = v.toLowerCase().trim();
+    return s === 'true' || s === 'checked' || s === 'yes' || s === '1';
+  }
+  return false;
+};
+
+/* ===========================================================
+   DATA FETCH — Config (Airtable) + cortes (Google Sheets CSV)
+   ===========================================================
+   The Airtable Config table holds connection strings & feature flags.
+   We fetch it first to learn the published-CSV URL for the canonical
+   cortes data (which lives in Google Sheets, where formulas are alive).
+   =========================================================== */
+
+// Fetch the Airtable Config table and return a Map<Key, Value>.
+async function fetchConfig() {
+  let all = [];
+  let offset = null;
+  do {
+    const params = new URLSearchParams();
+    params.set('pageSize', '100');
+    if (offset) params.set('offset', offset);
+    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(CONFIG_TABLE)}?${params.toString()}`;
+    const r = await fetch(url, { headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` } });
+    if (!r.ok) throw new Error(`Config fetch failed (${r.status}): ${await r.text()}`);
+    const data = await r.json();
+    all = all.concat(data.records);
+    offset = data.offset;
+  } while (offset);
+
+  // Be flexible about field name casing/variation: Key/key/Name and Value/value
+  const map = new Map();
+  for (const rec of all) {
+    const f = rec.fields;
+    const key = f.Key || f.key || f.Name || f.name;
+    const value = f.Value !== undefined ? f.Value : (f.value !== undefined ? f.value : null);
+    if (key) map.set(key, value);
+  }
+  return map;
+}
+
+// Fetch the published-to-web Sheets CSV and return raw text.
+async function fetchSheetsCSV(url) {
+  const r = await fetch(url, { redirect: 'follow' });
+  if (!r.ok) throw new Error(`Sheets CSV fetch failed (${r.status}): ${url}`);
+  return r.text();
+}
+
+// Parse a CSV string to a 2D array of cells.
+// Handles quoted fields with embedded commas, quotes (doubled), and CRLF.
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c === '\r') { /* skip */ }
+      else field += c;
+    }
+  }
+  if (field !== '' || row.length > 0) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+// Convert parsed CSV rows into records shaped like Airtable's JSON:
+// { id, fields: { columnName: cellValue, ... } }
+function csvRowsToRecords(rows) {
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => String(h).trim());
+  const records = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    // Skip totally blank lines
+    if (row.every(c => c === '' || c == null)) continue;
+    const fields = {};
+    for (let j = 0; j < headers.length; j++) {
+      const k = headers[j];
+      if (!k) continue;
+      fields[k] = row[j] !== undefined ? row[j] : '';
+    }
+    records.push({ id: `csv_row_${i + 1}`, fields });
+  }
+  return records;
+}
+
+// Top-level orchestrator: Config → URL → CSV → records.
+async function fetchAllRecords() {
+  const config = await fetchConfig();
+  const sheetsUrl = config.get(SHEETS_URL_CONFIG_KEY);
+  if (!sheetsUrl) {
+    throw new Error(`Config table is missing key "${SHEETS_URL_CONFIG_KEY}". Add a row to the Config table with that Key and the published-CSV URL as Value.`);
+  }
+  const csvText = await fetchSheetsCSV(sheetsUrl);
+  const rows = parseCSV(csvText);
+  return csvRowsToRecords(rows);
+}
+
+/* ===========================================================
+   DATA NORMALIZATION
+   =========================================================== */
+// Check if itemID starts with a letter >= 'W' (manual aggregate row, exclude from computations)
+function isAggregateItemID(itemID) {
+  if (!itemID) return false;
+  const m = String(itemID).match(/^([A-Za-z])/);
+  if (!m) return false;
+  return m[1].toUpperCase() >= 'W';
+}
+
+// Z-prefix rows are amortizaciones: their per-corte `_COST_TOT` values are
+// amounts to subtract from the gross facturable for that corte.
+function isAmortizationItemID(itemID) {
+  if (!itemID) return false;
+  const m = String(itemID).match(/^([A-Za-z])/);
+  if (!m) return false;
+  return m[1].toUpperCase() === 'Z';
+}
+
+function normalizePartidas(records) {
+  // First pass: extract per-corte amortizaciones from Z-* rows where HEADER=false
+  // Each Z-* row carries values in `0N_COST_TOT` columns; sum across all Z-* rows.
+  // We require HEADER=false so we ignore Z-1 / Z-1.02 which are structural totalization rows.
+  const amortizaciones = new Array(CORTES_TOTAL + 1).fill(0);  // index 1..10
+  for (const r of records) {
+    if (readFieldBool(r, 'HEADER')) continue;
+    const itemID = readFieldString(r, 'itemID');
+    if (!isAmortizationItemID(itemID)) continue;
+    for (let n = 1; n <= CORTES_TOTAL; n++) {
+      const pad = String(n).padStart(2, '0');
+      const v = readFieldNum(r, `${pad}_COST_TOT`);
+      if (v != null) amortizaciones[n] += v;
+    }
+  }
+
+  // Second pass: normal partidas (exclude HEADER and W/X/Y/Z aggregate rows)
+  const partidas = records.filter(r => {
+    if (readFieldBool(r, 'HEADER')) return false;
+    const itemID = readFieldString(r, 'itemID');
+    if (isAggregateItemID(itemID)) return false;
+    return true;
+  });
+
+  const normalized = partidas.map(rec => {
+    const itemID  = readFieldString(rec, 'itemID');
+    const consec  = readFieldNum(rec, 'CONSEC');
+    const birth   = readFieldNum(rec, 'birth');
+    const pArea   = readFieldString(rec, 'pArea_N') || '(sin pArea)';
+    const cat     = readFieldString(rec, 'cat') || '(sin cat)';
+    const catSub  = readFieldString(rec, 'cat_sub') || '';
+    const desc    = readFieldString(rec, 'item_description');
+    const itemName= readFieldString(rec, 'item_name');
+    const unit    = readFieldString(rec, 'OG_unit');
+    const ogQty   = readFieldNum(rec, 'OG_qty');
+    const ogUnitcost = readFieldNum(rec, 'OG_unitcost');
+    const ogTotal = readFieldNum(rec, 'OG_totalcost');
+    const addTotal= readFieldNum(rec, 'ADD_totalcost');
+
+    // Per-corte fields. We DO NOT read the `_COST_TOT` fields from Airtable
+    // because the schema is contaminated: in cortes_v2, `04_COST_TOT` actually
+    // holds a copy of OG_totalcost (not corte 4 totals), `05_COST_TOT` was
+    // renamed by Airtable AI to "05_COST_TOT (Number COP)", and similar
+    // mislabelings appear on other cortes. Since COST_TOT is structurally
+    // defined as COST + COST+ (verified across all real partidas in the
+    // source spreadsheet), we compute it on the fly. This sidesteps every
+    // schema mislabeling and gives consistent results regardless of how the
+    // Airtable schema drifts in future.
+    const cortes = [];
+    for (let n = 1; n <= CORTES_TOTAL; n++) {
+      const pad = String(n).padStart(2, '0');
+      const cost   = readFieldNum(rec, `${pad}_COST`);
+      const costP  = readFieldNum(rec, `${pad}_COST+`);
+      // OPTION X — honor COST_TOT directly (Sheets is canonical, its formula
+      // determines this). Allows negative manual adjustments like E-4.06's
+      // credit at Corte 05. Fall back to COST + COST+ only if COST_TOT is empty.
+      let total = readFieldNum(rec, `${pad}_COST_TOT`);
+      if (total == null) {
+        const computed = (cost || 0) + (costP || 0);
+        total = computed === 0 ? null : computed;
+      }
+      cortes.push({
+        n,
+        qty:   readFieldNum(rec, `${pad}_QTY`),
+        cost,
+        qtyP:  readFieldNum(rec, `${pad}_QTY+`),
+        costP,
+        total,
+      });
+    }
+
+    // Determine row class
+    let cls = 'is-og';
+    if (birth != null) {
+      if (birth < 0) cls = 'is-tbd';
+      else if (birth > 0) cls = 'is-add';
+      else cls = 'is-og';
+    }
+
+    // The contracted total for this row is OG_totalcost OR ADD_totalcost depending on classification
+    const contractedTotal = (cls === 'is-og') ? (ogTotal || 0) : (addTotal || 0);
+
+    // &-columns from Sheets: project manager's forecast & cross-check totals
+    const proyQty       = readFieldNum(rec, '&PROY_CANTIDAD');
+    const proySubtotal  = readFieldNum(rec, '&PROY_SUBTOTAL');
+    const ejecQty       = readFieldNum(rec, '&TOT_EJEC_CANTIDAD');
+    const ejecSubtotal  = readFieldNum(rec, '&TOT_EJEC_SUBTOTAL');
+    const deltaQty      = readFieldNum(rec, '&DELTA_CANTIDAD');
+    const deltaSubtotal = readFieldNum(rec, '&DELTA_SUBTOTAL');
+
+    // Cumulative executed across all cortes for this partida (using Option X totals).
+    const cumExec = cortes.reduce((s, c) => s + (c.total || 0), 0);
+
+    // FIVE-STATE STATUS CLASSIFICATION (cumulative-based):
+    //   'untouched'        — no executed amount anywhere (all cortes zero)
+    //   'in-progress'      — execution started but cumExec < contracted
+    //   'completed'        — cumExec ≥ contracted (hit the 100% line)
+    //   'overdraft-yellow' — over contracted but within PROYECTADO forecast
+    //   'overdraft-red'    — beyond PROYECTADO too (genuine alert)
+    // 1-peso tolerance avoids false positives from float-rounding artifacts.
+    const TOLERANCE = 1;
+    let statusLevel = 'untouched';
+    if (contractedTotal > 0) {
+      const overContract = (cumExec - contractedTotal) > TOLERANCE;
+      if (overContract) {
+        // Over contract — check vs projected to decide yellow vs red
+        const proyThreshold = (proySubtotal != null && proySubtotal > 0) ? proySubtotal : contractedTotal;
+        statusLevel = ((cumExec - proyThreshold) > TOLERANCE) ? 'overdraft-red' : 'overdraft-yellow';
+      } else if (cumExec > TOLERANCE) {
+        // Has execution but within contract — check if completed (within 1 peso of contracted)
+        statusLevel = ((contractedTotal - cumExec) <= TOLERANCE) ? 'completed' : 'in-progress';
+      }
+      // else: cumExec is essentially zero → 'untouched' (default)
+    } else if (cumExec > TOLERANCE) {
+      // No contract but has execution — treat as in-progress (edge case)
+      statusLevel = 'in-progress';
+    }
+
+    // Legacy mappings for any consumer that still references the old names
+    const overdraftLevel = (statusLevel === 'overdraft-red')    ? 'red'    :
+                           (statusLevel === 'overdraft-yellow') ? 'yellow' : 'none';
+    const isOverdrafted = overdraftLevel !== 'none';
+
+    // Anomaly detection: implied PROY unit cost (proySubtotal / proyQty) differs from
+    // OG unit cost by more than 50% — typically signals the contractor changed the unit
+    // of measurement mid-stream (e.g. C-2.07: qty went from 10 to 1 while cost climbed
+    // from $3.2M to $18M, implying impossible $18M/unit).
+    let hasAnomaly = false;
+    if (ogQty && ogUnitcost && ogUnitcost > 0 && proyQty != null && proyQty > 0 && proySubtotal != null && proySubtotal > 0) {
+      const impliedUnitcost = proySubtotal / proyQty;
+      const ratio = impliedUnitcost / ogUnitcost;
+      if (ratio > 1.5 || ratio < 0.5) hasAnomaly = true;
+    }
+
+    // Legacy boolean kept for any existing consumer
+    const isOverdraftedLegacy = overdraftLevel === 'red' || overdraftLevel === 'yellow';
+
+    return {
+      id: rec.id,
+      itemID, consec, birth, pArea, cat, catSub, desc, itemName, unit,
+      ogQty, ogUnitcost, ogTotal, addTotal, contractedTotal,
+      proyQty, proySubtotal, ejecQty, ejecSubtotal, deltaQty, deltaSubtotal,
+      cortes, cls, cumExec, statusLevel, overdraftLevel, isOverdrafted, hasAnomaly,
+    };
+  });
+
+  return { partidas: normalized, amortizaciones };
+}
+
+/* ===========================================================
+   GROUPING — itemID-path-based recursive tree
+   ===========================================================
+   Every separator in itemID (- or .) is a level boundary.
+   A.1.01    → path: ['A','1','01']           depth 3 (leaf=01)
+   B.3.1.02  → path: ['B','3','1','02']       depth 4 (leaf=02)
+   The first segment (letter) maps to a pArea.
+   The last segment is the partida leaf.
+   Everything in between is collapsible group levels.
+   =========================================================== */
+
+// Parse itemID into ordered path segments
+function parsePath(itemID) {
+  if (!itemID) return [];
+  // Split on - or . treating both as separators
+  return String(itemID).split(/[-.]/).map(s => s.trim()).filter(Boolean);
+}
+
+// Numeric-aware sort comparator for path segments
+function cmpSeg(a, b) {
+  const na = parseFloat(a), nb = parseFloat(b);
+  if (!isNaN(na) && !isNaN(nb)) return na - nb;
+  return String(a).localeCompare(String(b));
+}
+
+// Map first-segment letter to pArea name when needed
+const LETTER_TO_AREA = {
+  'A': 'Bar Piso 2',
+  'B': 'Cubierta',
+  'C': 'Restaurante',
+  'D': 'PUB',
+  'E': 'Bar HI END',
+};
+
+function buildGroups(partidas) {
+  // Recursive tree node: { children: Map<segment, node>, partidas: [], label, segment, depth }
+  const root = { children: new Map(), partidas: [], label: '', segment: '', depth: 0 };
+
+  for (const p of partidas) {
+    const path = parsePath(p.itemID);
+    if (path.length < 2) {
+      // Edge case: partidas with malformed itemID — bucket under pArea only
+      const fallbackSeg = p.pArea || '?';
+      if (!root.children.has(fallbackSeg)) {
+        root.children.set(fallbackSeg, { children: new Map(), partidas: [], label: p.pArea || '(sin pArea)', segment: fallbackSeg, depth: 1 });
+      }
+      root.children.get(fallbackSeg).partidas.push(p);
+      continue;
+    }
+
+    // Walk the path, creating nodes as needed. The LEAF (last segment) is NOT made into a node —
+    // it identifies the partida itself. The path up to but not including the leaf forms the group tree.
+    const groupPath = path.slice(0, -1); // ancestor levels
+    let node = root;
+    for (let i = 0; i < groupPath.length; i++) {
+      const seg = groupPath[i];
+      if (!node.children.has(seg)) {
+        // Compute label for this group
+        let label = seg;
+        if (i === 0) {
+          // pArea letter → pArea name
+          label = LETTER_TO_AREA[seg] || p.pArea || seg;
+        } else if (i === 1) {
+          // cat level → use cat text from any partida that has it
+          label = p.cat || seg;
+        } else if (i === 2) {
+          // cat_sub level → use cat_sub text from any partida that has it
+          label = p.catSub || seg;
+        }
+        // Build the human-readable label: "1 — PRELIMINARES" for non-area levels
+        let displayLabel = label;
+        if (i > 0 && label !== seg) {
+          displayLabel = `${seg} — ${label}`;
+        }
+        node.children.set(seg, {
+          children: new Map(),
+          partidas: [],
+          label: displayLabel,
+          rawLabel: label,
+          segment: seg,
+          depth: i + 1,
+        });
+      }
+      node = node.children.get(seg);
+    }
+    node.partidas.push(p);
+  }
+
+  // Helper: combine two status levels — the more severe wins.
+  // Priority: overdraft-red > overdraft-yellow > completed > in-progress > untouched
+  function maxStatusLevel(a, b) {
+    const rank = {
+      'untouched': 0,
+      'in-progress': 1,
+      'completed': 2,
+      'overdraft-yellow': 3,
+      'overdraft-red': 4,
+    };
+    return (rank[a] || 0) >= (rank[b] || 0) ? a : b;
+  }
+  function statusRank(s) {
+    return ({ 'untouched':0,'in-progress':1,'completed':2,'overdraft-yellow':3,'overdraft-red':4 }[s] || 0);
+  }
+
+  // Compute totals, counts, and per-corte aggregates recursively; sort children
+  function summarize(node, keyPath = []) {
+    let count = node.partidas.length;
+    let total = node.partidas.reduce((s, p) => s + (p.contractedTotal || 0), 0);
+    let proyTotal = node.partidas.reduce((s, p) => s + (p.proySubtotal || 0), 0);
+    // Aggregate status level and anomaly flag from own partidas
+    let statusLevel = 'untouched';
+    let hasAnomaly = false;
+    for (const p of node.partidas) {
+      statusLevel = maxStatusLevel(statusLevel, p.statusLevel);
+      if (p.hasAnomaly) hasAnomaly = true;
+    }
+
+    // Per-corte aggregation: sum qty, cost, qty+, cost+, and total per corte across partidas
+    const corteAgg = [];
+    for (let n = 1; n <= CORTES_TOTAL; n++) {
+      corteAgg.push({ qty: 0, cost: 0, qtyP: 0, costP: 0, total: 0 });
+    }
+    let cumExecCost = 0;
+    for (const p of node.partidas) {
+      for (let i = 0; i < CORTES_TOTAL; i++) {
+        const c = p.cortes[i];
+        if (c.qty)   corteAgg[i].qty   += c.qty;
+        if (c.cost)  corteAgg[i].cost  += c.cost;
+        if (c.qtyP)  corteAgg[i].qtyP  += c.qtyP;
+        if (c.costP) corteAgg[i].costP += c.costP;
+        if (c.total) {
+          corteAgg[i].total += c.total;
+          cumExecCost += c.total;
+        }
+      }
+    }
+
+    // Recurse FIRST into children so their aggregates (total, proyTotal, corteAgg,
+    // statusLevel) are populated. We need those values to be able to sort by them.
+    const childResults = new Map();
+    for (const [k, child] of node.children) {
+      const childKeyPath = [...keyPath, k];
+      childResults.set(k, summarize(child, childKeyPath));
+    }
+
+    // Roll up child aggregates into this node BEFORE sorting (so node.proyTotal etc. are ready)
+    for (const [, childSum] of childResults) {
+      count += childSum.count;
+      total += childSum.total;
+      proyTotal += childSum.proyTotal;
+      cumExecCost += childSum.cumExecCost;
+      statusLevel = maxStatusLevel(statusLevel, childSum.statusLevel);
+      if (childSum.hasAnomaly) hasAnomaly = true;
+      for (let i = 0; i < CORTES_TOTAL; i++) {
+        corteAgg[i].qty   += childSum.corteAgg[i].qty;
+        corteAgg[i].cost  += childSum.corteAgg[i].cost;
+        corteAgg[i].qtyP  += childSum.corteAgg[i].qtyP;
+        corteAgg[i].costP += childSum.corteAgg[i].costP;
+        corteAgg[i].total += childSum.corteAgg[i].total;
+      }
+    }
+
+    // SORT_BY-aware comparators for child nodes and partidas.
+    // For 'corte', uses HIGHLIGHTED_CORTE (set externally before render).
+    // All numeric sorts are descending; ties fall back to OG segment order.
+    function compareNodes(aKey, bKey) {
+      const a = node.children.get(aKey);
+      const b = node.children.get(bKey);
+      let primary = 0;
+      switch (SORT_BY) {
+        case 'contracted': primary = (b.total || 0) - (a.total || 0); break;
+        case 'proyectado': primary = (b.proyTotal || 0) - (a.proyTotal || 0); break;
+        case 'corte': {
+          const n = HIGHLIGHTED_CORTE;
+          if (n) primary = (b.corteAgg[n - 1].total || 0) - (a.corteAgg[n - 1].total || 0);
+          break;
+        }
+        case 'severity': primary = statusRank(b.statusLevel) - statusRank(a.statusLevel); break;
+      }
+      if (primary !== 0) return primary;
+      // Tie-breaker = OG segment order. Root uses pArea priority list.
+      if (node === root) {
+        const aName = LETTER_TO_AREA[aKey] || aKey;
+        const bName = LETTER_TO_AREA[bKey] || bKey;
+        const ia = PAREA_ORDER.indexOf(aName);
+        const ib = PAREA_ORDER.indexOf(bName);
+        if (ia >= 0 && ib >= 0) return ia - ib;
+        if (ia >= 0) return -1;
+        if (ib >= 0) return 1;
+      }
+      return cmpSeg(aKey, bKey);
+    }
+
+    function comparePartidas(p1, p2) {
+      let primary = 0;
+      switch (SORT_BY) {
+        case 'contracted': primary = (p2.contractedTotal || 0) - (p1.contractedTotal || 0); break;
+        case 'proyectado': primary = (p2.proySubtotal || 0) - (p1.proySubtotal || 0); break;
+        case 'corte': {
+          const n = HIGHLIGHTED_CORTE;
+          if (n) primary = (p2.cortes[n - 1].total || 0) - (p1.cortes[n - 1].total || 0);
+          break;
+        }
+        case 'severity': primary = statusRank(p2.statusLevel) - statusRank(p1.statusLevel); break;
+      }
+      if (primary !== 0) return primary;
+      // Tie-breaker = OG leaf segment order
+      const leaf1 = parsePath(p1.itemID).slice(-1)[0] || '';
+      const leaf2 = parsePath(p2.itemID).slice(-1)[0] || '';
+      return cmpSeg(leaf1, leaf2);
+    }
+
+    const sortedKeys = [...node.children.keys()].sort(compareNodes);
+    node.partidas.sort(comparePartidas);
+
+    // Build the final sorted children Map
+    const newChildren = new Map();
+    for (const k of sortedKeys) {
+      newChildren.set(k, node.children.get(k));
+    }
+    node.children = newChildren;
+    node.count = count;
+    node.total = total;
+    node.proyTotal = proyTotal;
+    node.corteAgg = corteAgg;
+    node.cumExecCost = cumExecCost;
+    node.statusLevel = statusLevel;
+    node.hasAnomaly = hasAnomaly;
+    // Legacy: map statusLevel back to overdraftLevel for any old consumer
+    node.overdraftLevel = (statusLevel === 'overdraft-red')    ? 'red'    :
+                          (statusLevel === 'overdraft-yellow') ? 'yellow' : 'none';
+    node.hasOverdrafted = node.overdraftLevel !== 'none';
+    node.keyPath = keyPath;
+    return { count, total, proyTotal, corteAgg, cumExecCost, statusLevel, hasAnomaly };
+  }
+  summarize(root);
+
+  return { root };
+}
+
+/* ===========================================================
+   FILTERING — apply current filter & search to a partida
+   =========================================================== */
+function partidaMatchesFilter(p) {
+  if (CURRENT_FILTER === 'og' && p.cls !== 'is-og') return false;
+  if (CURRENT_FILTER === 'add' && p.cls !== 'is-add') return false;
+  if (CURRENT_FILTER === 'tbd' && p.cls !== 'is-tbd') return false;
+  // Overdraft filter: 'overdrafted' = red OR yellow status; 'clean' = anything else
+  if (OVERDRAFT_FILTER === 'overdrafted') {
+    if (p.statusLevel !== 'overdraft-red' && p.statusLevel !== 'overdraft-yellow') return false;
+  }
+  if (OVERDRAFT_FILTER === 'clean') {
+    if (p.statusLevel === 'overdraft-red' || p.statusLevel === 'overdraft-yellow') return false;
+  }
+  if (SEARCH_TERM) {
+    const term = SEARCH_TERM.toLowerCase();
+    const hay = (p.itemID + ' ' + p.desc + ' ' + p.cat + ' ' + p.catSub + ' ' + p.itemName).toLowerCase();
+    if (!hay.includes(term)) return false;
+  }
+  return true;
+}
+
+/* ===========================================================
+   RENDER MATRIX
+   =========================================================== */
+function render() {
+  const visiblePartidas = PARTIDAS.filter(partidaMatchesFilter);
+  const { root } = buildGroups(visiblePartidas);
+  const content = document.getElementById('content');
+
+  if (visiblePartidas.length === 0) {
+    content.innerHTML = '<div class="loader">No hay partidas que coincidan con los filtros.</div>';
+    return;
+  }
+
+  // Build column headers
+  let headerHTML = '<table class="matrix"><thead>';
+
+  // Row 1: top headers
+  headerHTML += '<tr>';
+  headerHTML += '<th class="col-id" rowspan="2">Código</th>';
+  headerHTML += '<th class="col-desc" rowspan="2">Descripción</th>';
+  headerHTML += '<th class="col-birth" rowspan="2">Birth</th>';
+  headerHTML += '<th class="col-unit" rowspan="2">UND</th>';
+  headerHTML += '<th class="col-qty" rowspan="2">Qty<br>contr.</th>';
+  headerHTML += '<th class="col-cost" rowspan="2">$ unit</th>';
+  headerHTML += '<th class="col-cost divider-left" rowspan="2">$ contr.<br>total</th>';
+  headerHTML += '<th class="col-cost divider-left" rowspan="2">$ proy.<br>total</th>';
+
+  for (let n = 1; n <= CORTES_TOTAL; n++) {
+    const expanded = EXPANDED_CORTES.has(n);
+    const colspan = expanded ? 5 : 1;
+    const pad = String(n).padStart(2, '0');
+    headerHTML += `<th class="corte-group divider-left ${expanded ? 'expanded' : ''}" colspan="${colspan}" data-corte="${n}" title="Click para expandir/colapsar columnas del corte ${n}">${expanded ? '▼' : '▶'} Corte ${pad}</th>`;
+  }
+
+  headerHTML += '<th class="col-cost divider-left" rowspan="2">% avance</th>';
+  headerHTML += '</tr>';
+
+  // Row 2: sub-headers (only when corte is expanded)
+  headerHTML += '<tr>';
+  for (let n = 1; n <= CORTES_TOTAL; n++) {
+    if (EXPANDED_CORTES.has(n)) {
+      headerHTML += `<th class="corte-sub divider-left" data-corte="${n}">QTY</th>`;
+      headerHTML += `<th class="corte-sub" data-corte="${n}">COST</th>`;
+      headerHTML += `<th class="corte-sub" data-corte="${n}">QTY+</th>`;
+      headerHTML += `<th class="corte-sub" data-corte="${n}">COST+</th>`;
+      headerHTML += `<th class="corte-sub" data-corte="${n}">TOT</th>`;
+    } else {
+      headerHTML += `<th class="corte-sub divider-left" data-corte="${n}">$ tot</th>`;
+    }
+  }
+  headerHTML += '</tr></thead><tbody>';
+
+  // Body — recursively walk the tree
+  // The label area spans the first 6 identity cells (Code, Descripción, Birth, UND, Qty contr., $ unit).
+  // Real numeric cells start at $ contr. total and continue through cortes and % avance.
+  const LABEL_SPAN = 6;
+  let bodyHTML = '';
+
+  // depth-class mapping: depth 1 = pArea, depth 2 = cat, depth 3 = sub-cat, depth 4+ = deeper
+  function depthClass(depth) {
+    if (depth === 1) return 'group-area';
+    if (depth === 2) return 'group-cat';
+    if (depth === 3) return 'group-subcat';
+    return 'group-deep';
+  }
+
+  // Render a numeric group cell with $ amount + cumulative % below
+  function groupNumCell(amount, cumPct, expanded, prefix = '', corteN = null) {
+    const dividerClass = prefix ? 'divider-left' : '';
+    const zeroClass = !amount ? 'zero' : '';
+    const pctStr = cumPct != null ? `<span class="pct-sub">${Math.round(cumPct)}%</span>` : '';
+    const corteAttr = corteN != null ? ` data-corte="${corteN}"` : '';
+    return `<td class="num group-num ${dividerClass} ${zeroClass}"${corteAttr}><strong>${fmtCOP(amount)}</strong>${pctStr}</td>`;
+  }
+
+  // Compute aggregates across all top-level pAreas (the master row totals)
+  function computeMasterAgg() {
+    const corteAgg = [];
+    for (let i = 0; i < CORTES_TOTAL; i++) corteAgg.push({ qty: 0, cost: 0, qtyP: 0, costP: 0, total: 0 });
+    let total = 0;
+    let proyTotal = 0;
+    let count = 0;
+    for (const [, child] of root.children) {
+      total += child.total;
+      proyTotal += (child.proyTotal || 0);
+      count += child.count;
+      for (let i = 0; i < CORTES_TOTAL; i++) {
+        corteAgg[i].qty   += child.corteAgg[i].qty;
+        corteAgg[i].cost  += child.corteAgg[i].cost;
+        corteAgg[i].qtyP  += child.corteAgg[i].qtyP;
+        corteAgg[i].costP += child.corteAgg[i].costP;
+        corteAgg[i].total += child.corteAgg[i].total;
+      }
+    }
+    return { total, proyTotal, count, corteAgg };
+  }
+  const masterAgg = computeMasterAgg();
+
+  // Master row — sits at the top of the body, aggregates everything
+  function renderMasterRow() {
+    const collapsed = COLLAPSED_GROUPS.has('g::__master__');
+    const extraClasses = [];
+    if (root.statusLevel && root.statusLevel !== 'untouched') {
+      extraClasses.push('status-' + root.statusLevel);
+    }
+    if (root.hasAnomaly) extraClasses.push('has-anomaly');
+    const extraClassStr = extraClasses.length ? ' ' + extraClasses.join(' ') : '';
+    let row = `<tr class="group-master${extraClassStr}" data-key="g::__master__" data-depth="0">`;
+    row += `<td class="group-label" colspan="${LABEL_SPAN}">
+      <span class="toggle">${collapsed ? '▶' : '▼'}</span>
+      <strong>PROYECTO COMPLETO</strong>
+      <span class="group-meta">— ${masterAgg.count} partidas · ${fmtCOPfull(masterAgg.total)}</span>
+    </td>`;
+
+    // Contracted total cell — 100% reference
+    row += `<td class="num group-num divider-left"><strong>${fmtCOP(masterAgg.total)}</strong></td>`;
+    row += `<td class="num group-num divider-left"><strong>${fmtCOP(masterAgg.proyTotal || 0)}</strong></td>`;
+
+    // Per-corte cumulative % tracking
+    let cumExec = 0;
+    for (let n = 1; n <= CORTES_TOTAL; n++) {
+      const agg = masterAgg.corteAgg[n - 1];
+      cumExec += agg.total || 0;
+      const cumPct = masterAgg.total > 0 ? (cumExec / masterAgg.total) * 100 : null;
+      if (EXPANDED_CORTES.has(n)) {
+        row += `<td class="num group-num divider-left ${!agg.qty ? 'zero':''}" data-corte="${n}">${fmtNum(agg.qty)}</td>`;
+        row += `<td class="num group-num ${!agg.cost ? 'zero':''}" data-corte="${n}">${fmtCOP(agg.cost)}</td>`;
+        row += `<td class="num group-num ${!agg.qtyP ? 'zero':''}" data-corte="${n}">${fmtNum(agg.qtyP)}</td>`;
+        row += `<td class="num group-num ${!agg.costP ? 'zero':''}" data-corte="${n}">${fmtCOP(agg.costP)}</td>`;
+        row += groupNumCell(agg.total, cumPct, true, '', n);
+      } else {
+        row += groupNumCell(agg.total, cumPct, false, 'divider', n);
+      }
+    }
+
+    const totalPct = masterAgg.total > 0 ? (cumExec / masterAgg.total) * 100 : null;
+    const totalPctClass = totalPct == null ? 'zero' : (totalPct > 100 ? 'over' : '');
+    const totalPctText = totalPct == null ? '' : Math.round(totalPct) + '%';
+    row += `<td class="num group-num divider-left ${totalPctClass}"><strong>${totalPctText}</strong></td>`;
+
+    row += '</tr>';
+    return row;
+  }
+
+  function renderGroupRow(node, seg, myPath) {
+    const groupKey = `g::${myPath.join('|')}`;
+    const collapsed = COLLAPSED_GROUPS.has(groupKey);
+    const cls = depthClass(node.depth);
+    const indent = (node.depth - 1) * 14;
+
+    // First the label area (spans the first 6 identity columns)
+    const extraClasses = [];
+    if (node.statusLevel && node.statusLevel !== 'untouched') {
+      extraClasses.push('status-' + node.statusLevel);
+    }
+    if (node.hasAnomaly) extraClasses.push('has-anomaly');
+    const extraClassStr = extraClasses.length ? ' ' + extraClasses.join(' ') : '';
+    let row = `<tr class="${cls}${extraClassStr}" data-key="${groupKey}" data-depth="${node.depth}">`;
+    row += `<td class="group-label" colspan="${LABEL_SPAN}" style="padding-left:${8 + indent}px">
+      <span class="toggle">${collapsed ? '▶' : '▼'}</span>
+      ${escapeHtml(node.label)}
+      <span class="group-meta">— ${node.count} · ${fmtCOPfull(node.total)}</span>
+    </td>`;
+
+    // Contracted total cell
+    row += `<td class="num group-num divider-left"><strong>${fmtCOP(node.total)}</strong></td>`;
+    row += `<td class="num group-num divider-left"><strong>${fmtCOP(node.proyTotal || 0)}</strong></td>`;
+
+    // Per-corte cells with cumulative % below the $ amount
+    let cumExec = 0;
+    for (let n = 1; n <= CORTES_TOTAL; n++) {
+      const agg = node.corteAgg[n - 1];
+      cumExec += agg.total || 0;
+      const cumPct = node.total > 0 ? (cumExec / node.total) * 100 : null;
+      if (EXPANDED_CORTES.has(n)) {
+        row += `<td class="num group-num divider-left ${!agg.qty ? 'zero':''}" data-corte="${n}">${fmtNum(agg.qty)}</td>`;
+        row += `<td class="num group-num ${!agg.cost ? 'zero':''}" data-corte="${n}">${fmtCOP(agg.cost)}</td>`;
+        row += `<td class="num group-num ${!agg.qtyP ? 'zero':''}" data-corte="${n}">${fmtNum(agg.qtyP)}</td>`;
+        row += `<td class="num group-num ${!agg.costP ? 'zero':''}" data-corte="${n}">${fmtCOP(agg.costP)}</td>`;
+        row += groupNumCell(agg.total, cumPct, true, '', n);
+      } else {
+        row += groupNumCell(agg.total, cumPct, false, 'divider', n);
+      }
+    }
+
+    // % avance for the group: cost-weighted (cumulative)
+    const pctVal = node.total > 0 ? (node.cumExecCost / node.total) * 100 : null;
+    const pctClass = pctVal == null ? 'zero' : (pctVal > 100 ? 'over' : '');
+    const pctText = pctVal == null ? '' : Math.round(pctVal) + '%';
+    row += `<td class="num group-num divider-left ${pctClass}">${pctText}</td>`;
+
+    row += '</tr>';
+    return row;
+  }
+
+  // Render AIU + IVA + TOTAL FACTURABLE rows that sit below master, derived from masterAgg
+  function renderAIURows() {
+    const definitions = [
+      { key: 'a',   label: 'A — Administración (11%)',       pct: AIU_ADMIN_PCT,                   color: AIU_COLORS.a },
+      { key: 'i',   label: 'I — Imprevistos (1%)',           pct: AIU_IMPREV_PCT,                  color: AIU_COLORS.i },
+      { key: 'u',   label: 'U — Utilidad (3%)',              pct: AIU_UTIL_PCT,                    color: AIU_COLORS.u },
+      { key: 'iva', label: 'IVA sobre Utilidad (19% de U)',  pct: AIU_UTIL_PCT * IVA_ON_UTIL,      color: AIU_COLORS.iva },
+    ];
+
+    let html = '';
+    for (const def of definitions) {
+      const rowContracted = masterAgg.total * def.pct;
+      const rowProy = (masterAgg.proyTotal || 0) * def.pct;
+      html += `<tr class="group-aiu" data-aiu="${def.key}">`;
+      html += `<td class="group-label" colspan="${LABEL_SPAN}">
+        <span class="aiu-dot" style="background:${def.color};"></span>
+        ${escapeHtml(def.label)}
+      </td>`;
+      html += `<td class="num group-num divider-left">${fmtCOP(rowContracted)}</td>`;
+      html += `<td class="num group-num divider-left">${fmtCOP(rowProy)}</td>`;
+
+      let cumExec = 0;
+      for (let n = 1; n <= CORTES_TOTAL; n++) {
+        const direct = masterAgg.corteAgg[n - 1].total || 0;
+        const amount = direct * def.pct;
+        cumExec += amount;
+        const cumPct = rowContracted > 0 ? (cumExec / rowContracted) * 100 : null;
+        const pctStr = cumPct != null ? `<span class="pct-sub">${Math.round(cumPct)}%</span>` : '';
+        if (EXPANDED_CORTES.has(n)) {
+          // span the 5 sub-columns with the single AIU value
+          html += `<td class="num group-num divider-left" colspan="5" data-corte="${n}">${fmtCOP(amount)}${pctStr}</td>`;
+        } else {
+          html += `<td class="num group-num divider-left ${!amount ? 'zero':''}" data-corte="${n}">${fmtCOP(amount)}${pctStr}</td>`;
+        }
+      }
+      const totalPct = rowContracted > 0 ? (cumExec / rowContracted) * 100 : null;
+      html += `<td class="num group-num divider-left">${totalPct != null ? Math.round(totalPct) + '%' : ''}</td>`;
+      html += '</tr>';
+    }
+
+    // TOTAL FACTURABLE row (direct + AIU + IVA)
+    const facContracted = masterAgg.total * AIU_MULTIPLIER;
+    const facProy = (masterAgg.proyTotal || 0) * AIU_MULTIPLIER;
+    let facCumExec = 0;
+    html += `<tr class="group-facturable">`;
+    html += `<td class="group-label" colspan="${LABEL_SPAN}">
+      <strong>TOTAL FACTURABLE</strong>
+      <span class="group-meta">— directo + AIU + IVA</span>
+    </td>`;
+    html += `<td class="num group-num divider-left"><strong>${fmtCOP(facContracted)}</strong></td>`;
+    html += `<td class="num group-num divider-left"><strong>${fmtCOP(facProy)}</strong></td>`;
+    for (let n = 1; n <= CORTES_TOTAL; n++) {
+      const direct = masterAgg.corteAgg[n - 1].total || 0;
+      const amount = direct * AIU_MULTIPLIER;
+      facCumExec += amount;
+      const cumPct = facContracted > 0 ? (facCumExec / facContracted) * 100 : null;
+      const pctStr = cumPct != null ? `<span class="pct-sub">${Math.round(cumPct)}%</span>` : '';
+      if (EXPANDED_CORTES.has(n)) {
+        html += `<td class="num group-num divider-left" colspan="5" data-corte="${n}"><strong>${fmtCOP(amount)}</strong>${pctStr}</td>`;
+      } else {
+        html += `<td class="num group-num divider-left ${!amount ? 'zero':''}" data-corte="${n}"><strong>${fmtCOP(amount)}</strong>${pctStr}</td>`;
+      }
+    }
+    const facTotalPct = facContracted > 0 ? (facCumExec / facContracted) * 100 : null;
+    html += `<td class="num group-num divider-left"><strong>${facTotalPct != null ? Math.round(facTotalPct) + '%' : ''}</strong></td>`;
+    html += '</tr>';
+
+    // AMORTIZACIONES row — per-corte values from Z-prefix rows' _COST_TOT fields
+    // Show as a deduction (red, negative-styled).
+    const totalAmortizaciones = AMORTIZACIONES.reduce((a, b) => a + b, 0);
+    html += `<tr class="group-amort">`;
+    html += `<td class="group-label" colspan="${LABEL_SPAN}">
+      <span class="aiu-dot" style="background:${AIU_COLORS.amort};"></span>
+      AMORTIZACIONES
+      <span class="group-meta">— deducciones por corte (Z-* rows)</span>
+    </td>`;
+    html += `<td class="num group-num divider-left">${totalAmortizaciones > 0 ? '−' + fmtCOP(totalAmortizaciones) : ''}</td>`;
+    html += `<td class="num group-num divider-left"></td>`;
+    let amortCumExec = 0;
+    for (let n = 1; n <= CORTES_TOTAL; n++) {
+      const amort = AMORTIZACIONES[n] || 0;
+      amortCumExec += amort;
+      const display = amort > 0 ? '−' + fmtCOP(amort) : '';
+      const pctStr = ''; // amortizations don't have a contracted reference to %-against
+      if (EXPANDED_CORTES.has(n)) {
+        html += `<td class="num group-num divider-left" colspan="5" data-corte="${n}">${display}</td>`;
+      } else {
+        html += `<td class="num group-num divider-left ${!amort ? 'zero':''}" data-corte="${n}">${display}</td>`;
+      }
+    }
+    html += `<td class="num group-num divider-left"></td>`;
+    html += '</tr>';
+
+    // NETO PAGABLE row = TOTAL FACTURABLE − AMORTIZACIONES per corte
+    const netContracted = facContracted - totalAmortizaciones;
+    const netProy = facProy - totalAmortizaciones;
+    let netCumExec = 0;
+    html += `<tr class="group-neto">`;
+    html += `<td class="group-label" colspan="${LABEL_SPAN}">
+      <strong>NETO PAGABLE</strong>
+      <span class="group-meta">— facturable − amortizaciones</span>
+    </td>`;
+    html += `<td class="num group-num divider-left"><strong>${fmtCOP(netContracted)}</strong></td>`;
+    html += `<td class="num group-num divider-left"><strong>${fmtCOP(netProy)}</strong></td>`;
+    for (let n = 1; n <= CORTES_TOTAL; n++) {
+      const direct = masterAgg.corteAgg[n - 1].total || 0;
+      const facturable = direct * AIU_MULTIPLIER;
+      const amort = AMORTIZACIONES[n] || 0;
+      const amount = facturable - amort;
+      netCumExec += amount;
+      const cumPct = netContracted > 0 ? (netCumExec / netContracted) * 100 : null;
+      const pctStr = cumPct != null && amount !== 0 ? `<span class="pct-sub">${Math.round(cumPct)}%</span>` : '';
+      if (EXPANDED_CORTES.has(n)) {
+        html += `<td class="num group-num divider-left" colspan="5" data-corte="${n}"><strong>${fmtCOP(amount)}</strong>${pctStr}</td>`;
+      } else {
+        html += `<td class="num group-num divider-left ${!amount ? 'zero':''}" data-corte="${n}"><strong>${fmtCOP(amount)}</strong>${pctStr}</td>`;
+      }
+    }
+    const netTotalPct = netContracted > 0 ? (netCumExec / netContracted) * 100 : null;
+    html += `<td class="num group-num divider-left"><strong>${netTotalPct != null ? Math.round(netTotalPct) + '%' : ''}</strong></td>`;
+    html += '</tr>';
+
+    return html;
+  }
+
+  // Render the master row first, then AIU rows
+  bodyHTML += renderMasterRow();
+  bodyHTML += renderAIURows();
+  const masterCollapsed = COLLAPSED_GROUPS.has('g::__master__');
+
+  function walkWithPath(node, pathSoFar) {
+    for (const [seg, child] of node.children) {
+      const myPath = [...pathSoFar, seg];
+      bodyHTML += renderGroupRow(child, seg, myPath);
+
+      const groupKey = `g::${myPath.join('|')}`;
+      if (COLLAPSED_GROUPS.has(groupKey)) continue;
+      walkWithPath(child, myPath);
+      for (const p of child.partidas) {
+        bodyHTML += renderPartidaRow(p);
+      }
+    }
+  }
+  walkWithPath(root, []);
+  if (masterCollapsed) {
+    // Erase the body we just built (only keep the master + AIU summary block)
+    bodyHTML = renderMasterRow() + renderAIURows();
+  }
+
+  content.innerHTML = headerHTML + bodyHTML + '</tbody></table>' + renderSummary(visiblePartidas);
+
+  // Wire up clicks
+  document.querySelectorAll('.corte-group').forEach(th => {
+    th.addEventListener('click', () => {
+      const n = parseInt(th.dataset.corte, 10);
+      if (EXPANDED_CORTES.has(n)) EXPANDED_CORTES.delete(n);
+      else EXPANDED_CORTES.add(n);
+      render();
+    });
+  });
+  document.querySelectorAll('tr.group-master, tr.group-area, tr.group-cat, tr.group-subcat, tr.group-deep').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const k = tr.dataset.key;
+      if (COLLAPSED_GROUPS.has(k)) COLLAPSED_GROUPS.delete(k);
+      else COLLAPSED_GROUPS.add(k);
+      render();
+    });
+  });
+  // Double-click on a partida row → open detail drawer
+  document.querySelectorAll('tr.row-partida').forEach(tr => {
+    tr.addEventListener('dblclick', () => {
+      openPartidaDrawer(tr.dataset.id);
+    });
+  });
+}
+
+function renderPartidaRow(p) {
+  const cumQty = p.cortes.reduce((s, c) => s + (c.qty || 0) + (c.qtyP || 0), 0);
+  const pct = p.ogQty ? (cumQty / p.ogQty) * 100 : null;
+  const pctClass = pct == null ? 'zero' : (pct > 100 ? 'over' : (pct > 0 ? '' : 'zero'));
+  const pctText = pct == null ? '' : Math.round(pct) + '%';
+
+  let cells = '';
+  cells += `<td class="col-id" title="Birth: ${p.birth}">${p.itemID}</td>`;
+  cells += `<td class="col-desc" title="${escapeAttr(p.desc)}">${escapeHtml(p.desc)}</td>`;
+
+  let birthCls = 'col-birth';
+  let birthTxt = p.birth == null ? '—' : (p.birth < 0 ? 'TBD' : p.birth);
+  if (p.cls === 'is-add') birthCls += ' is-add';
+  if (p.cls === 'is-tbd') birthCls += ' is-tbd';
+  cells += `<td class="${birthCls}">${birthTxt}</td>`;
+
+  cells += `<td class="col-unit">${escapeHtml(p.unit || '')}</td>`;
+  cells += `<td class="num">${fmtNum(p.ogQty)}</td>`;
+  cells += `<td class="num">${fmtCOP(p.ogUnitcost)}</td>`;
+  cells += `<td class="num divider-left"><strong>${fmtCOP(p.contractedTotal)}</strong></td>`;
+  cells += `<td class="num divider-left"><strong>${fmtCOP(p.proySubtotal || 0)}</strong></td>`;
+
+  for (let n = 1; n <= CORTES_TOTAL; n++) {
+    const c = p.cortes[n - 1];
+    if (EXPANDED_CORTES.has(n)) {
+      cells += `<td class="num divider-left ${!c.qty ? 'zero':''}" data-corte="${n}">${fmtNum(c.qty)}</td>`;
+      cells += `<td class="num ${!c.cost ? 'zero':''}" data-corte="${n}">${fmtCOP(c.cost)}</td>`;
+      cells += `<td class="num ${!c.qtyP ? 'zero':''}" data-corte="${n}">${fmtNum(c.qtyP)}</td>`;
+      cells += `<td class="num ${!c.costP ? 'zero':''}" data-corte="${n}">${fmtCOP(c.costP)}</td>`;
+      cells += `<td class="num ${!c.total ? 'zero':''}" data-corte="${n}"><strong>${fmtCOP(c.total)}</strong></td>`;
+    } else {
+      cells += `<td class="num divider-left ${!c.total ? 'zero':''}" data-corte="${n}">${fmtCOP(c.total)}</td>`;
+    }
+  }
+
+  cells += `<td class="num divider-left ${pctClass}">${pctText}</td>`;
+
+  // Build class list: row-partida + cls (is-og/is-add/is-tbd) + status level + anomaly
+  const classes = ['row-partida', p.cls];
+  if (p.statusLevel && p.statusLevel !== 'untouched') {
+    classes.push('status-' + p.statusLevel);
+  }
+  if (p.hasAnomaly) classes.push('has-anomaly');
+  return `<tr class="${classes.join(' ')}" data-id="${p.id}">${cells}</tr>`;
+}
+
+function renderSummary(partidas) {
+  const og = partidas.filter(p => p.cls === 'is-og');
+  const add = partidas.filter(p => p.cls === 'is-add');
+  const tbd = partidas.filter(p => p.cls === 'is-tbd');
+
+  const ogTotal = og.reduce((s, p) => s + (p.contractedTotal || 0), 0);
+  const addTotal = add.reduce((s, p) => s + (p.contractedTotal || 0), 0);
+  const tbdTotal = tbd.reduce((s, p) => s + (p.contractedTotal || 0), 0);
+
+  // Cumulative executed across all cortes (whole project)
+  const exec = partidas.reduce((s, p) => {
+    return s + p.cortes.reduce((ss, c) => ss + (c.total || 0), 0);
+  }, 0);
+  // Executed restricted to OG partidas only
+  const ogExec = og.reduce((s, p) => {
+    return s + p.cortes.reduce((ss, c) => ss + (c.total || 0), 0);
+  }, 0);
+
+  // Saldo restante del original = OG contracted - OG executed
+  const saldoOG = ogTotal - ogExec;
+  // Saldo restante proyectado = (OG + ADD firmes + TBD) - total executed
+  const totalContracted = ogTotal + addTotal + tbdTotal;
+  const saldoProy = totalContracted - exec;
+
+  return `
+    <div class="summary">
+      <div class="stat og">
+        <div class="lbl">Original BOQ (OG)</div>
+        <div class="val">${fmtCOPfull(ogTotal)}</div>
+        <div class="sub">${og.length} partidas</div>
+      </div>
+      <div class="stat add">
+        <div class="lbl">Adicionales firmes</div>
+        <div class="val">${fmtCOPfull(addTotal)}</div>
+        <div class="sub">${add.length} partidas registradas</div>
+      </div>
+      <div class="stat tbd">
+        <div class="lbl">Adicionales TBD</div>
+        <div class="val">${fmtCOPfull(tbdTotal)}</div>
+        <div class="sub">${tbd.length} partidas pendientes</div>
+      </div>
+      <div class="stat total">
+        <div class="lbl">Ejecutado acumulado</div>
+        <div class="val">${fmtCOPfull(exec)}</div>
+        <div class="sub">suma sobre ${CORTES_TOTAL} cortes</div>
+      </div>
+      <div class="stat saldo-og">
+        <div class="lbl">Saldo restante del original</div>
+        <div class="val">${fmtCOPfull(saldoOG)}</div>
+        <div class="sub">OG contratado − OG ejecutado</div>
+      </div>
+      <div class="stat saldo-proy">
+        <div class="lbl">Saldo restante proyectado</div>
+        <div class="val">${fmtCOPfull(saldoProy)}</div>
+        <div class="sub">Total contratado − ejecutado total</div>
+      </div>
+    </div>
+    ${renderSCurve(partidas)}
+  `;
+}
+
+/* ===========================================================
+   S-CURVE — Project cumulative cost projection
+   ===========================================================
+   Plots actual cumulative cost per corte (solid line) and a
+   projected continuation through Corte 10 using a Gaussian bell
+   distribution centered on the midpoint of remaining cortes.
+   Total contracted = OG_totalcost sum + ADD_totalcost sum (incl TBD).
+   =========================================================== */
+function renderSCurve(partidas) {
+  const totalContracted = partidas.reduce((s, p) => s + (p.contractedTotal || 0), 0);
+  if (totalContracted <= 0) return '';
+
+  // Compute per-corte cost split: OG partidas vs Adicionales (firms + TBD)
+  const corteOG  = new Array(CORTES_TOTAL + 1).fill(0); // 1..10
+  const corteADD = new Array(CORTES_TOTAL + 1).fill(0);
+  const corteCost = new Array(CORTES_TOTAL + 1).fill(0); // sum of both
+  for (const p of partidas) {
+    const isOG = (p.cls === 'is-og');
+    for (let n = 1; n <= CORTES_TOTAL; n++) {
+      const v = p.cortes[n - 1].total || 0;
+      if (isOG) corteOG[n] += v; else corteADD[n] += v;
+      corteCost[n] += v;
+    }
+  }
+
+  // For projecting OG/ADD split in future cortes, use the running mix from actuals
+  const totalActualOG  = corteOG.reduce((a, b) => a + b, 0);
+  const totalActualADD = corteADD.reduce((a, b) => a + b, 0);
+  const actualTotal    = totalActualOG + totalActualADD;
+  const ogRatio  = actualTotal > 0 ? totalActualOG / actualTotal : 1.0;
+  const addRatio = 1 - ogRatio;
+
+  // Cumulative actual through each corte
+  const cumActual = [0]; // corte 0 = $0
+  for (let n = 1; n <= CORTES_TOTAL; n++) {
+    cumActual.push(cumActual[n - 1] + corteCost[n]);
+  }
+
+  // Detect "current corte" = highest n where corteCost[n] > 0
+  let currentCorte = 0;
+  for (let n = CORTES_TOTAL; n >= 1; n--) {
+    if (corteCost[n] > 0) { currentCorte = n; break; }
+  }
+
+  const executedAtCurrent = cumActual[currentCorte];
+  const remaining = Math.max(0, totalContracted - executedAtCurrent);
+  const remainingCortes = CORTES_TOTAL - currentCorte;
+
+  // Build projected cumulative array: from currentCorte onward, distribute
+  // `remaining` across (currentCorte+1)..CORTES_TOTAL using a half-Gaussian
+  // that PEAKS at currentCorte+1 (right after the current actual) and DECAYS
+  // toward CORTES_TOTAL. This models a project that's just past peak velocity
+  // and is now winding down — far more realistic than a centered bell that
+  // would produce a "dip then rise" artifact right after the actual data.
+  const cumProjected = cumActual.slice(); // start from actual
+  if (remaining > 0 && remainingCortes > 0) {
+    const futureRange = [];
+    for (let n = currentCorte + 1; n <= CORTES_TOTAL; n++) futureRange.push(n);
+    const center = currentCorte + 1;                   // peak at first projected corte
+    const sigma = Math.max(remainingCortes / 2, 1.0);  // decay span = half the remaining range
+    const weights = futureRange.map(n => Math.exp(-Math.pow(n - center, 2) / (2 * sigma * sigma)));
+    const wSum = weights.reduce((a, b) => a + b, 0);
+    let cumP = executedAtCurrent;
+    for (let i = 0; i < futureRange.length; i++) {
+      const portion = (weights[i] / wSum) * remaining;
+      cumP += portion;
+      cumProjected[futureRange[i]] = cumP;
+    }
+  }
+
+  // SVG dimensions — viewBox aspect chosen to fill wide containers nicely
+  // (width:100% will scale, but the aspect determines proportions).
+  // We reserve a dedicated zone BELOW the x-axis for amortization bars.
+  const W = 1400, H = 460;
+  const padL = 80, padR = 40, padT = 28, padB = 56;
+  const amortZoneH = 80;                                   // px reserved below x axis
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB - amortZoneH;              // positive plot area only
+
+  // Y-axis scales on FACTURABLE total (direct + AIU + IVA), so 100% = invoice total.
+  const totalFacturable = totalContracted * AIU_MULTIPLIER;
+
+  // Cumulative amortizaciones from the global AMORTIZACIONES array (per-corte from Z-* rows)
+  const cumAmort = [0];
+  for (let n = 1; n <= CORTES_TOTAL; n++) {
+    cumAmort.push(cumAmort[n - 1] + (AMORTIZACIONES[n] || 0));
+  }
+  const maxAmortPerCorte = Math.max(1, ...AMORTIZACIONES) * 1.1;  // 10% headroom
+
+  // Amortization ratio from actuals — used to project future amortizations
+  const facturableAtCurrent = cumActual[currentCorte] * AIU_MULTIPLIER;
+  const amortRatio = facturableAtCurrent > 0 ? cumAmort[currentCorte] / facturableAtCurrent : 0;
+
+  // X scale: corte 0..10 → padL..(padL+plotW)
+  const xOf = n => padL + (n / CORTES_TOTAL) * plotW;
+  // Y scale for POSITIVE values: 0..totalFacturable → (padT+plotH)..padT (inverted)
+  const yOf = v => padT + plotH - (v / totalFacturable) * plotH;
+  // Y position for amortization bars in the dedicated zone below x axis
+  const yAmort = a => padT + plotH + (a / maxAmortPerCorte) * amortZoneH;
+
+  // Build polyline points — cumulative tracks FACTURABLE BRUTO (direct × AIU_MULTIPLIER)
+  const actualPoints = [];
+  for (let n = 0; n <= currentCorte; n++) {
+    actualPoints.push(`${xOf(n).toFixed(1)},${yOf(cumActual[n] * AIU_MULTIPLIER).toFixed(1)}`);
+  }
+  const projectedPoints = [];
+  if (currentCorte < CORTES_TOTAL) {
+    for (let n = currentCorte; n <= CORTES_TOTAL; n++) {
+      projectedPoints.push(`${xOf(n).toFixed(1)},${yOf(cumProjected[n] * AIU_MULTIPLIER).toFixed(1)}`);
+    }
+  }
+
+  // NETO cumulative (facturable − cumulative amortizaciones)
+  const netActualPoints = [];
+  for (let n = 0; n <= currentCorte; n++) {
+    const netCum = cumActual[n] * AIU_MULTIPLIER - cumAmort[n];
+    netActualPoints.push(`${xOf(n).toFixed(1)},${yOf(netCum).toFixed(1)}`);
+  }
+  const netProjectedPoints = [];
+  if (currentCorte < CORTES_TOTAL) {
+    for (let n = currentCorte; n <= CORTES_TOTAL; n++) {
+      // For projected cortes, estimate amort as cumProjected × AIU_MULT × amortRatio
+      const projFactCum = cumProjected[n] * AIU_MULTIPLIER;
+      const projAmortCum = projFactCum * amortRatio;
+      const netCum = projFactCum - projAmortCum;
+      netProjectedPoints.push(`${xOf(n).toFixed(1)},${yOf(netCum).toFixed(1)}`);
+    }
+  }
+
+  // Build axis ticks
+  let xTicks = '';
+  for (let n = 0; n <= CORTES_TOTAL; n++) {
+    const x = xOf(n);
+    const isCurrent = (n === currentCorte);
+    xTicks += `<line x1="${x}" y1="${padT + plotH}" x2="${x}" y2="${padT + plotH + 5}" stroke="#888" stroke-width="1"/>`;
+    xTicks += `<text x="${x}" y="${padT + plotH + 18}" text-anchor="middle" font-size="10" fill="${isCurrent ? '#0a3d2a' : '#666'}" ${isCurrent ? 'font-weight="600"' : ''}>C${String(n).padStart(2, '0')}</text>`;
+  }
+
+  let yTicks = '';
+  for (let i = 0; i <= 4; i++) {
+    const v = (totalFacturable * i) / 4;
+    const y = yOf(v);
+    const pct = i * 25;
+    yTicks += `<line x1="${padL - 5}" y1="${y}" x2="${padL + plotW}" y2="${y}" stroke="${i === 0 || i === 4 ? '#888' : '#e8e8e3'}" stroke-width="${i === 0 || i === 4 ? 1 : 0.8}" stroke-dasharray="${i === 0 || i === 4 ? '0' : '3,3'}"/>`;
+    yTicks += `<text x="${padL - 10}" y="${y + 3}" text-anchor="end" font-size="10" fill="#666">${pct}%</text>`;
+    yTicks += `<text x="${padL + plotW + 8}" y="${y + 3}" text-anchor="start" font-size="9" fill="#999">${fmtCOPshort(v)}</text>`;
+  }
+
+  // Current corte vertical line
+  let currentLine = '';
+  if (currentCorte > 0 && currentCorte < CORTES_TOTAL) {
+    const cx = xOf(currentCorte);
+    const facturableAtCurrent = executedAtCurrent * AIU_MULTIPLIER;
+    currentLine = `
+      <line x1="${cx}" y1="${padT}" x2="${cx}" y2="${padT + plotH}" stroke="#0a3d2a" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.7"/>
+      <text x="${cx + 4}" y="${padT + 12}" font-size="10" fill="#0a3d2a" font-weight="600">Actual</text>
+      <text x="${cx + 4}" y="${padT + 24}" font-size="9" fill="#0a3d2a">${Math.round((facturableAtCurrent/totalFacturable)*100)}% facturado</text>
+    `;
+  }
+
+  // Build per-corte STACKED BARS, bottom to top:
+  //   OG direct  →  ADD direct  →  A  →  I  →  U  →  IVA
+  // Actual cortes get saturated colors; projected cortes get muted versions.
+  // Each bar's total height equals the facturable amount for that corte.
+  const barW = Math.min(plotW / (CORTES_TOTAL + 2), 70);
+  let bars = '';
+
+  // Helper to draw a single segment of a stack; returns the new "base" Y above which
+  // the next segment should be drawn.
+  function drawSegment(cx, value, baseY, fill) {
+    if (value <= 0) return baseY;
+    const topY = yOf(yToValue(baseY) + value);
+    bars += `<rect x="${(cx - barW/2).toFixed(1)}" y="${topY.toFixed(1)}" width="${barW.toFixed(1)}" height="${(baseY - topY).toFixed(1)}" fill="${fill}" rx="1"/>`;
+    return topY;
+  }
+  function yToValue(y) { return totalFacturable * (1 - (y - padT) / plotH); }
+
+  for (let n = 1; n <= CORTES_TOTAL; n++) {
+    let ogPart, addPart;
+    if (n <= currentCorte) {
+      ogPart  = corteOG[n];
+      addPart = corteADD[n];
+    } else {
+      // Projected: distribute the period's direct total by the actual OG:ADD ratio
+      const periodTotal = cumProjected[n] - cumProjected[n - 1];
+      ogPart  = periodTotal * ogRatio;
+      addPart = periodTotal * addRatio;
+    }
+    const directTotal = ogPart + addPart;
+    if (directTotal <= 0) continue;
+
+    // AIU + IVA layers (computed from direct)
+    const layers = computeAIULayers(directTotal);
+    const facturableForCorte = layers.total;  // direct + a + i + u + iva
+
+    const isActual = (n <= currentCorte);
+    const cx = xOf(n);
+    const yBase = yOf(0);
+
+    // Color picks (actual = saturated, projected = muted)
+    const colOG  = isActual ? AIU_COLORS.og  : '#9dbcaf';
+    const colADD = isActual ? AIU_COLORS.add : '#d99489';
+    const colA   = isActual ? AIU_COLORS.a   : '#a5acba';
+    const colI   = isActual ? AIU_COLORS.i   : '#d3c2a8';
+    const colU   = isActual ? AIU_COLORS.u   : '#a3bcb6';
+    const colIVA = isActual ? AIU_COLORS.iva : '#b5adc4';
+
+    // Stack from bottom up: OG → ADD → A → I → U → IVA
+    let baseY = yBase;
+    baseY = drawSegment(cx, ogPart,    baseY, colOG);
+    baseY = drawSegment(cx, addPart,   baseY, colADD);
+    baseY = drawSegment(cx, layers.a,  baseY, colA);
+    baseY = drawSegment(cx, layers.i,  baseY, colI);
+    baseY = drawSegment(cx, layers.u,  baseY, colU);
+    baseY = drawSegment(cx, layers.iva, baseY, colIVA);
+
+    // Label the facturable total on top of the stack (only if bar is tall enough)
+    if ((yBase - baseY) > 22) {
+      bars += `<text x="${cx.toFixed(1)}" y="${(baseY - 4).toFixed(1)}" text-anchor="middle" font-size="9" fill="${isActual ? '#1a1a1a' : '#666'}" font-weight="500">${fmtCOPshort(facturableForCorte)}</text>`;
+    }
+  }
+
+  // Amortization bars below the x-axis (in their dedicated zone)
+  // Actual cortes show real amortizaciones from Z-* rows; projected cortes
+  // estimate using the amortRatio computed from actuals.
+  let amortBars = '';
+  for (let n = 1; n <= CORTES_TOTAL; n++) {
+    let amortVal;
+    if (n <= currentCorte) {
+      amortVal = AMORTIZACIONES[n] || 0;
+    } else {
+      // Project: per-corte projected facturable × amortRatio
+      const projFacturablePerCorte = (cumProjected[n] - cumProjected[n - 1]) * AIU_MULTIPLIER;
+      amortVal = projFacturablePerCorte * amortRatio;
+    }
+    if (amortVal <= 0) continue;
+
+    const cx = xOf(n);
+    const yTop = padT + plotH;                 // x-axis baseline
+    const yBot = yAmort(amortVal);             // grows downward into amort zone
+    const isActual = (n <= currentCorte);
+    const fill = isActual ? AIU_COLORS.amort : '#c89992';
+    amortBars += `<rect x="${(cx - barW/2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${(yBot - yTop).toFixed(1)}" fill="${fill}" rx="1"/>`;
+    if ((yBot - yTop) > 18) {
+      amortBars += `<text x="${cx.toFixed(1)}" y="${(yBot - 3).toFixed(1)}" text-anchor="middle" font-size="9" fill="#fff" font-weight="500">−${fmtCOPshort(amortVal)}</text>`;
+    }
+  }
+
+  // Amortization zone separator line (visual cue that we're in negative territory)
+  const amortSep = `<line x1="${padL}" y1="${padT + plotH}" x2="${padL + plotW}" y2="${padT + plotH}" stroke="#444" stroke-width="1.2"/>`;
+  const amortZoneLabel = `<text x="${padL - 10}" y="${padT + plotH + amortZoneH + 8}" text-anchor="end" font-size="9" fill="#8b2e2e" font-style="italic">Amortizaciones (deducciones)</text>`;
+
+  // Curves: GROSS facturable (existing) and NETO pagable (new)
+  const actualPath    = actualPoints.length > 1    ? `<polyline points="${actualPoints.join(' ')}" fill="none" stroke="#0a3d2a" stroke-width="2.2" stroke-linejoin="round"/>` : '';
+  const projectedPath = projectedPoints.length > 1 ? `<polyline points="${projectedPoints.join(' ')}" fill="none" stroke="#888" stroke-width="2" stroke-dasharray="6,4" stroke-linejoin="round"/>` : '';
+  const netActualPath    = netActualPoints.length > 1    ? `<polyline points="${netActualPoints.join(' ')}" fill="none" stroke="${AIU_COLORS.neto}" stroke-width="2" stroke-linejoin="round"/>` : '';
+  const netProjectedPath = netProjectedPoints.length > 1 ? `<polyline points="${netProjectedPoints.join(' ')}" fill="none" stroke="${AIU_COLORS.neto}" stroke-width="1.8" stroke-dasharray="6,4" stroke-linejoin="round" opacity="0.6"/>` : '';
+
+  // Marker dots on actual / projected cumulative points (facturable BRUTO)
+  let dots = '';
+  for (let n = 0; n <= currentCorte; n++) {
+    dots += `<circle cx="${xOf(n).toFixed(1)}" cy="${yOf(cumActual[n] * AIU_MULTIPLIER).toFixed(1)}" r="3" fill="#fff" stroke="#0a3d2a" stroke-width="1.5"/>`;
+  }
+  for (let n = currentCorte + 1; n <= CORTES_TOTAL; n++) {
+    dots += `<circle cx="${xOf(n).toFixed(1)}" cy="${yOf(cumProjected[n] * AIU_MULTIPLIER).toFixed(1)}" r="2.5" fill="#fff" stroke="#888" stroke-width="1"/>`;
+  }
+
+  // Title block
+  const subtitle = currentCorte === 0
+    ? 'Sin cortes ejecutados — proyección distribuye scope contratado + AIU + IVA por curva de Bell'
+    : `Ejecución real hasta Corte ${String(currentCorte).padStart(2,'0')} · Curva verde = facturable bruto · Curva azul = neto pagable (− amortizaciones)`;
+
+  return `
+    <div class="s-curve">
+      <div class="s-curve-title">
+        <h3>Curva S del Proyecto</h3>
+        <div class="s-curve-sub">${escapeHtml(subtitle)}</div>
+      </div>
+      <div class="s-curve-legend">
+        <span><span class="legend-dot" style="background:#0a3d2a;"></span>OG directo</span>
+        <span><span class="legend-dot" style="background:#c0392b;"></span>Adicionales directo</span>
+        <span><span class="legend-dot" style="background:#6b7a8f;"></span>A (Admin 11%)</span>
+        <span><span class="legend-dot" style="background:#b89968;"></span>I (Imprev 1%)</span>
+        <span><span class="legend-dot" style="background:#5a8e85;"></span>U (Util 3%)</span>
+        <span><span class="legend-dot" style="background:#7a6b8f;"></span>IVA (19% U)</span>
+        <span><span class="legend-dot" style="background:${AIU_COLORS.amort};"></span>Amortizaciones</span>
+        <span><span class="legend-dot" style="background:${AIU_COLORS.neto};"></span>Neto pagable (curva)</span>
+        <span><span class="legend-dot" style="background:transparent; border:1px dashed #0a3d2a;"></span>Corte actual</span>
+        <span class="s-curve-total">Directo: <strong>${fmtCOPfull(totalContracted)}</strong> &nbsp;·&nbsp; Facturable: <strong>${fmtCOPfull(totalFacturable)}</strong></span>
+      </div>
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="width:100%; height:auto;">
+        ${yTicks}
+        ${bars}
+        ${xTicks}
+        ${amortSep}
+        ${amortBars}
+        ${amortZoneLabel}
+        ${currentLine}
+        ${projectedPath}
+        ${actualPath}
+        ${netProjectedPath}
+        ${netActualPath}
+        ${dots}
+      </svg>
+    </div>
+  `;
+}
+
+// Short COP format for axis labels (with abbreviations OK on axis)
+function fmtCOPshort(n) {
+  if (n == null || isNaN(n) || n === 0) return '$0';
+  if (Math.abs(n) >= 1e9) return '$' + (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
+  if (Math.abs(n) >= 1e6) return '$' + (n / 1e6).toFixed(0) + 'M';
+  if (Math.abs(n) >= 1e3) return '$' + Math.round(n / 1e3) + 'k';
+  return '$' + Math.round(n);
+}
+
+const escapeHtml = s => String(s||'').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const escapeAttr = s => String(s||'').replace(/"/g, '&quot;').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+/* ===========================================================
+   PARTIDA DETAIL DRAWER
+   ===========================================================
+   Double-click any partida row → drawer slides in from the right
+   showing the full per-corte traversal of that partida's history.
+   =========================================================== */
+function openPartidaDrawer(recordId) {
+  const p = PARTIDAS.find(x => x.id === recordId);
+  if (!p) return;
+
+  // Build path label
+  const path = parsePath(p.itemID);
+  const pAreaName = LETTER_TO_AREA[path[0]] || p.pArea || path[0] || '?';
+  const pathParts = [pAreaName];
+  if (p.cat) pathParts.push(`${path[1] || ''} — ${p.cat}`.trim());
+  if (p.catSub) pathParts.push(`${path[2] || ''} — ${p.catSub}`.trim());
+
+  // Classification
+  let clsLabel = 'Original BOQ';
+  let clsKey = 'og';
+  if (p.cls === 'is-add') { clsLabel = `Adicional · birth Corte ${p.birth}`; clsKey = 'add'; }
+  else if (p.cls === 'is-tbd') { clsLabel = 'Adicional TBD (sin corte de origen)'; clsKey = 'tbd'; }
+
+  // Per-corte rows + cumulative tracking
+  let cumQty = 0;
+  let cumCost = 0;
+  let firstOverdraftCorte = null;
+  const tableRows = [];
+  for (let i = 0; i < CORTES_TOTAL; i++) {
+    const c = p.cortes[i];
+    const hasData = (c.qty || c.cost || c.qtyP || c.costP || c.total);
+    const thisQty = (c.qty || 0) + (c.qtyP || 0);
+    const thisCost = c.total || 0;
+    cumQty += thisQty;
+    cumCost += thisCost;
+    const isOverdraft = p.ogQty != null && cumQty > p.ogQty;
+    const isFirstOverdraft = isOverdraft && firstOverdraftCorte === null && (c.qty || c.qtyP);
+    if (isFirstOverdraft) firstOverdraftCorte = c.n;
+    tableRows.push({
+      n: c.n,
+      hasData,
+      qty: c.qty || 0,
+      cost: c.cost || 0,
+      qtyP: c.qtyP || 0,
+      costP: c.costP || 0,
+      total: c.total || 0,
+      cumQty,
+      cumCost,
+      isOverdraft,
+      isFirstOverdraft,
+    });
+  }
+  const pctExec = (p.ogQty && p.ogQty > 0) ? (cumQty / p.ogQty) * 100 : null;
+  const pctExecCost = (p.contractedTotal > 0) ? (cumCost / p.contractedTotal) * 100 : null;
+
+  // Build HTML
+  document.getElementById('drawer-title').textContent = p.itemID + ' — ' + (p.desc || '(sin descripción)');
+  document.getElementById('drawer-meta').innerHTML = `
+    ${escapeHtml(pathParts.filter(Boolean).join(' / '))}
+  `;
+
+  let body = '';
+
+  // Identidad section
+  body += `<div class="drawer-section">
+    <h3>Identidad</h3>
+    <div class="drawer-grid">
+      <div class="k">Código</div><div class="v"><strong>${escapeHtml(p.itemID)}</strong></div>
+      <div class="k">Descripción</div><div class="v">${escapeHtml(p.desc || '—')}</div>
+      <div class="k">pArea</div><div class="v">${escapeHtml(pAreaName)}</div>
+      <div class="k">Categoría</div><div class="v">${escapeHtml(p.cat || '—')}${p.catSub ? ' / ' + escapeHtml(p.catSub) : ''}</div>
+      <div class="k">Clasificación</div><div class="v ${clsKey}">${clsLabel}</div>
+      <div class="k">Birth Corte</div><div class="v">${p.birth == null ? '—' : (p.birth < 0 ? 'TBD' : p.birth)}</div>
+    </div>
+  </div>`;
+
+  // Contrato + Proyección section — show three values side-by-side coherently
+  const proyAvail = (p.proySubtotal != null && p.proySubtotal > 0);
+  const deltaSub = proyAvail ? (p.proySubtotal - (p.ogTotal || 0)) : null;
+  const deltaPctVsOG = (p.ogTotal && p.ogTotal > 0 && deltaSub != null)
+    ? (deltaSub / p.ogTotal) * 100 : null;
+  const execVsContract = (p.contractedTotal > 0)
+    ? (p.cumExec / p.contractedTotal) * 100 : null;
+  const execVsProy = (proyAvail)
+    ? (p.cumExec / p.proySubtotal) * 100 : null;
+
+  // Status badge (mirrors the row's color theme)
+  const statusBadges = {
+    'untouched':        { label: 'Sin ejecutar',                color: '#888',    bg: '#f5f5f0' },
+    'in-progress':      { label: 'En ejecución',                color: '#1f5f3a', bg: '#e8f4ec' },
+    'completed':        { label: 'Completado',                  color: '#1a4b78', bg: '#e8f1fa' },
+    'overdraft-yellow': { label: 'Sobreejec. dentro proyectado', color: '#c0392b', bg: '#fff5d6' },
+    'overdraft-red':    { label: 'Sobreejec. sobre proyectado',  color: '#8b2e2e', bg: '#fdebe9' },
+  };
+  const badge = statusBadges[p.statusLevel] || statusBadges['untouched'];
+  const anomalyBadge = p.hasAnomaly
+    ? `<span class="status-badge anomaly">🚩 Anomalía datos</span>` : '';
+
+  body += `<div class="drawer-section">
+    <h3>Estado</h3>
+    <div class="status-row">
+      <span class="status-badge" style="background:${badge.bg};color:${badge.color}">${badge.label}</span>
+      ${anomalyBadge}
+    </div>
+  </div>`;
+
+  body += `<div class="drawer-section">
+    <h3>Contratado / Proyectado / Ejecutado</h3>
+    <table class="financials-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Cantidad</th>
+          <th>Subtotal</th>
+          <th>vs OG</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="fin-row fin-og">
+          <td>Original (OG)</td>
+          <td>${fmtNum(p.ogQty) || '—'} ${escapeHtml(p.unit || '')}</td>
+          <td><strong>${fmtCOPfull(p.ogTotal || 0)}</strong></td>
+          <td>—</td>
+        </tr>
+        ${p.cls === 'is-add' || p.cls === 'is-tbd' ? `
+        <tr class="fin-row fin-add">
+          <td>Adicional (${p.cls === 'is-tbd' ? 'TBD' : 'firme'})</td>
+          <td>—</td>
+          <td><strong>${fmtCOPfull(p.addTotal || 0)}</strong></td>
+          <td>+${fmtCOPfull(p.addTotal || 0)}</td>
+        </tr>` : ''}
+        <tr class="fin-row fin-proy">
+          <td>Proyectado</td>
+          <td>${p.proyQty != null ? fmtNum(p.proyQty) : '—'} ${escapeHtml(p.unit || '')}</td>
+          <td><strong>${proyAvail ? fmtCOPfull(p.proySubtotal) : '—'}</strong></td>
+          <td>${deltaSub != null ? (deltaSub >= 0 ? '+' : '') + fmtCOPfull(deltaSub) +
+              (deltaPctVsOG != null ? ` (${deltaPctVsOG >= 0 ? '+' : ''}${Math.round(deltaPctVsOG)}%)` : '')
+              : '—'}</td>
+        </tr>
+        <tr class="fin-row fin-ejec">
+          <td>Total ejecutado</td>
+          <td>—</td>
+          <td><strong>${fmtCOPfull(p.cumExec)}</strong></td>
+          <td>${execVsContract != null ? Math.round(execVsContract) + '% contr.' : '—'}${execVsProy != null ? ` · ${Math.round(execVsProy)}% proy.` : ''}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
+
+  // Traversal section
+  body += `<div class="drawer-section">
+    <h3>Traversal — historia por corte</h3>
+    <table class="traversal-table">
+      <thead>
+        <tr>
+          <th>Corte</th>
+          <th>QTY</th>
+          <th>COST</th>
+          <th>QTY+</th>
+          <th>COST+</th>
+          <th>TOT corte</th>
+          <th>Qty acum.</th>
+          <th>Costo acum.</th>
+        </tr>
+      </thead>
+      <tbody>`;
+  for (const r of tableRows) {
+    const rowCls = [
+      r.hasData ? 'has-data' : 'empty-corte',
+      r.isOverdraft ? 'overdraft' : '',
+      r.isFirstOverdraft ? 'first-overdraft' : '',
+    ].filter(Boolean).join(' ');
+    body += `<tr class="${rowCls}">
+      <td>Corte ${String(r.n).padStart(2, '0')}</td>
+      <td>${r.qty ? fmtNum(r.qty) : ''}</td>
+      <td>${r.cost ? fmtCOP(r.cost) : ''}</td>
+      <td>${r.qtyP ? fmtNum(r.qtyP) : ''}</td>
+      <td>${r.costP ? fmtCOP(r.costP) : ''}</td>
+      <td><strong>${r.total ? fmtCOP(r.total) : ''}</strong></td>
+      <td>${r.cumQty ? fmtNum(r.cumQty) : ''}</td>
+      <td>${r.cumCost ? fmtCOP(r.cumCost) : ''}</td>
+    </tr>`;
+  }
+  body += `</tbody></table>
+
+    <div class="traversal-summary">
+      <div class="item">
+        <div class="lbl">Cantidad ejecutada</div>
+        <div class="val">${fmtNum(cumQty) || '0'}${p.ogQty ? ' / ' + fmtNum(p.ogQty) : ''}</div>
+      </div>
+      <div class="item ${pctExec != null && pctExec > 100 ? 'warn' : ''}">
+        <div class="lbl">% ejecutado (qty)</div>
+        <div class="val">${pctExec != null ? Math.round(pctExec) + '%' : '—'}</div>
+      </div>
+      <div class="item">
+        <div class="lbl">Costo ejecutado</div>
+        <div class="val">${fmtCOPfull(cumCost)}</div>
+      </div>
+      <div class="item ${pctExecCost != null && pctExecCost > 100 ? 'warn' : ''}">
+        <div class="lbl">% ejecutado (costo)</div>
+        <div class="val">${pctExecCost != null ? Math.round(pctExecCost) + '%' : '—'}</div>
+      </div>
+      ${firstOverdraftCorte ? `
+      <div class="item warn">
+        <div class="lbl">Overdraft desde</div>
+        <div class="val">Corte ${String(firstOverdraftCorte).padStart(2, '0')}</div>
+      </div>` : `
+      <div class="item ok">
+        <div class="lbl">Estado</div>
+        <div class="val">${cumQty === 0 ? 'Sin ejecutar' : 'Dentro de contrato'}</div>
+      </div>`}
+    </div>
+  </div>`;
+
+  document.getElementById('drawer-body').innerHTML = body;
+  document.getElementById('drawer-overlay').classList.add('open');
+}
+
+function closePartidaDrawer() {
+  document.getElementById('drawer-overlay').classList.remove('open');
+}
+
+document.getElementById('drawer-close').addEventListener('click', closePartidaDrawer);
+document.getElementById('drawer-overlay').addEventListener('click', e => {
+  if (e.target.id === 'drawer-overlay') closePartidaDrawer();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePartidaDrawer();
+});
+
+/* ===========================================================
+   INIT
+   =========================================================== */
+async function init() {
+  setStatus('cargando…');
+  try {
+    ALL_RECORDS = await fetchAllRecords();
+    const _norm = normalizePartidas(ALL_RECORDS);
+    PARTIDAS = _norm.partidas;
+    AMORTIZACIONES = _norm.amortizaciones;
+
+    // Default HIGHLIGHTED_CORTE to the latest corte that has any execution data
+    let latestCorte = 0;
+    for (let n = CORTES_TOTAL; n >= 1; n--) {
+      const anyData = PARTIDAS.some(p => p.cortes[n - 1].total);
+      if (anyData) { latestCorte = n; break; }
+    }
+    HIGHLIGHTED_CORTE = latestCorte;
+    const sel = document.getElementById('corte-highlight-select');
+    if (sel) sel.value = String(HIGHLIGHTED_CORTE);
+    updateCorteHighlightStyle();
+    updateSortOptionAvailability();
+
+    setStatus(`${PARTIDAS.length} partidas`);
+    render();
+  } catch (e) {
+    document.getElementById('content').innerHTML = `<div class="error"><strong>Error cargando datos:</strong><br>${escapeHtml(e.message)}</div>`;
+    setStatus('error');
+  }
+}
+
+// Wire up controls
+document.getElementById('btn-reload').addEventListener('click', init);
+document.getElementById('btn-expand-all').addEventListener('click', () => {
+  COLLAPSED_GROUPS.clear();
+  render();
+});
+document.getElementById('btn-collapse-subs').addEventListener('click', () => {
+  // Collapse all groups EXCEPT master and pAreas (depth 1) — show pAreas with subtotals
+  COLLAPSED_GROUPS.clear();
+  COLLAPSED_GROUPS.delete('g::__master__'); // explicitly keep master expanded
+  const { root } = buildGroups(PARTIDAS);
+  function walk(node, pathSoFar) {
+    for (const [seg, child] of node.children) {
+      const myPath = [...pathSoFar, seg];
+      if (child.depth > 1) {
+        COLLAPSED_GROUPS.add(`g::${myPath.join('|')}`);
+      }
+      walk(child, myPath);
+    }
+  }
+  walk(root, []);
+  render();
+});
+document.getElementById('btn-collapse-all').addEventListener('click', () => {
+  // Collapse everything — only the master row remains visible
+  COLLAPSED_GROUPS.clear();
+  COLLAPSED_GROUPS.add('g::__master__');
+  render();
+});
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    CURRENT_FILTER = btn.dataset.filter;
+    render();
+  });
+});
+document.getElementById('search-input').addEventListener('input', e => {
+  SEARCH_TERM = e.target.value.trim();
+  render();
+});
+
+// Overdraft filter buttons — three-way (all / overdrafted / clean)
+document.querySelectorAll('.od-filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.od-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    OVERDRAFT_FILTER = btn.dataset.odfilter;
+    render();
+  });
+});
+
+// Color theme toggles — independent on/off for each color scheme.
+// Each toggle adds/removes a body class that CSS uses to suppress the corresponding theme.
+// The 'corte-highlight' toggle additionally controls the dynamic style tag.
+document.querySelectorAll('.color-toggle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const isActive = btn.classList.toggle('active');
+    const which = btn.dataset.toggle;
+    if (which === 'corte-highlight') {
+      // Just rebuild the dynamic style — if disabled, clear it
+      document.body.classList.toggle('no-color-corte-highlight', !isActive);
+      updateCorteHighlightStyle();
+    } else {
+      document.body.classList.toggle(`no-color-${which}`, !isActive);
+    }
+  });
+});
+
+// Corte highlight selector — updates the dynamic <style> tag rather than re-rendering.
+// Strategy: background-color ONLY on partida-row body cells (so row colors take prevalence),
+// plus a RED vertical edge on BOTH sides of the highlighted corte's column — top to bottom
+// across all rows. This emphasis is independent of body theme so it shows over any color.
+function updateCorteHighlightStyle() {
+  const styleEl = document.getElementById('corte-highlight-dynamic');
+  if (!styleEl) return;
+  // Respect the corte-highlight color toggle: if disabled, no highlight at all
+  if (!HIGHLIGHTED_CORTE || document.body.classList.contains('no-color-corte-highlight')) {
+    styleEl.textContent = '';
+    return;
+  }
+  const n = HIGHLIGHTED_CORTE;
+  styleEl.textContent = `
+    /* Soft yellow band — partida body rows only, no !important so row colors win */
+    table.matrix tbody tr.row-partida td[data-corte="${n}"] {
+      background-color: #fff4cc;
+    }
+    /* Header cells get a slightly deeper tint */
+    table.matrix thead th[data-corte="${n}"] {
+      background-color: #fbeeb8;
+    }
+    /* RED LEFT EDGE: every cell of corte ${n} that has divider-left (the corte's left column boundary) */
+    table.matrix [data-corte="${n}"].divider-left,
+    table.matrix th[data-corte="${n}"]:not(.corte-sub):first-of-type {
+      border-left: 2px solid #c0392b !important;
+    }
+    /* RED RIGHT EDGE: the cell immediately following the LAST cell of corte ${n}
+       (this is the first cell of corte ${n+1}, OR the % avance cell when n=10).
+       The adjacent-sibling + with :not([data-corte="${n}"]) ensures we only target
+       cells that are not themselves part of corte ${n}. */
+    table.matrix [data-corte="${n}"] + td:not([data-corte="${n}"]),
+    table.matrix [data-corte="${n}"] + th:not([data-corte="${n}"]) {
+      border-left: 2px solid #c0392b !important;
+    }
+  `;
+}
+
+// Sort dropdown — re-renders with the new order. The 'corte' option is enabled
+// only when a corte is highlighted (HIGHLIGHTED_CORTE > 0).
+function updateSortOptionAvailability() {
+  const opt = document.querySelector('#sort-select option[value="corte"]');
+  if (!opt) return;
+  if (HIGHLIGHTED_CORTE > 0) {
+    opt.disabled = false;
+    opt.textContent = `Corte ${String(HIGHLIGHTED_CORTE).padStart(2,'0')} ↓`;
+  } else {
+    opt.disabled = true;
+    opt.textContent = 'Corte seleccionado ↓ (requiere selección)';
+    // If user had 'corte' active when corte got unselected, revert to og
+    if (SORT_BY === 'corte') {
+      SORT_BY = 'og';
+      document.getElementById('sort-select').value = 'og';
+    }
+  }
+}
+
+document.getElementById('sort-select').addEventListener('change', e => {
+  SORT_BY = e.target.value;
+  render();
+});
+
+document.getElementById('corte-highlight-select').addEventListener('change', e => {
+  HIGHLIGHTED_CORTE = parseInt(e.target.value, 10) || 0;
+  updateCorteHighlightStyle();
+  updateSortOptionAvailability();
+  // If currently sorting by corte, re-render with the new corte's data
+  if (SORT_BY === 'corte') render();
+});
+
+init();
+</script>
+</body>
+</html>
